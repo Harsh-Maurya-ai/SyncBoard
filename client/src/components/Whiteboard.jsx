@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import Toolbar from "./Toolbar";
+import "./Whiteboard.css";
 import { initCanvas, resizeCanvas, setActiveTool } from "../canvas/canvasSetup";
 import {
   attachDrawingHandlers,
@@ -12,89 +14,27 @@ import {
   undo,
   redo,
   clearCanvas,
+  pushToHistory,
 } from "../canvas/history";
 import {
-  exportToJSON,
-  loadFromJSON,
   saveToLocalStorage,
   loadFromLocalStorage,
   downloadAsFile,
   loadFromFile,
 } from "../canvas/serialize";
+import { exportAsPNG } from "../canvas/export";
+import {
+  connectSocket,
+  disconnectSocket,
+  joinRoom,
+  getRoomId,
+  listenForConnectionStatus,
+  listenForRoomUsers,
+} from "../socket/socketClient";
+import { attachCanvasSync, broadcastFullBoard } from "../socket/canvasSync";
 
 const TOOLS = ["select", "pen", "eraser", "shape", "text"];
 const SHAPES = ["rectangle", "circle", "line", "arrow"];
-
-const styles = {
-  wrapper: {
-    display: "flex",
-    flexDirection: "column",
-    height: "100vh",
-    width: "100vw",
-    overflow: "hidden",
-  },
-  toolbar: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    padding: "10px 16px",
-    background: "#1e1e1e",
-    borderBottom: "1px solid #333",
-    flexWrap: "wrap",
-  },
-  toolBtn: {
-    padding: "6px 14px",
-    borderRadius: 6,
-    border: "1px solid #444",
-    background: "#2a2a2a",
-    color: "#ddd",
-    textTransform: "capitalize",
-    cursor: "pointer",
-    fontSize: 14,
-  },
-  toolBtnActive: {
-    background: "#4f7cff",
-    borderColor: "#4f7cff",
-    color: "#fff",
-  },
-  actionBtn: {
-    padding: "6px 14px",
-    borderRadius: 6,
-    border: "1px solid #444",
-    background: "#333",
-    color: "#ddd",
-    cursor: "pointer",
-    fontSize: 14,
-  },
-  select: {
-    padding: "6px 10px",
-    borderRadius: 6,
-    border: "1px solid #444",
-    background: "#2a2a2a",
-    color: "#ddd",
-    fontSize: 14,
-  },
-  colorInput: {
-    width: 36,
-    height: 32,
-    border: "none",
-    background: "transparent",
-    cursor: "pointer",
-  },
-  widthInput: {
-    width: 100,
-  },
-  divider: {
-    width: 1,
-    height: 24,
-    background: "#444",
-  },
-  canvasContainer: {
-    flex: 1,
-    position: "relative",
-    background: "#f4f4f4",
-  },
-};
 
 export default function Whiteboard() {
   const canvasElRef = useRef(null);
@@ -103,10 +43,29 @@ export default function Whiteboard() {
   const activeToolRef = useRef("pen");
   const fileInputRef = useRef(null);
 
+  const [roomId] = useState(getRoomId);
   const [activeTool, setActiveToolState] = useState("pen");
   const [activeShape, setActiveShapeState] = useState("rectangle");
   const [color, setColor] = useState("#000000");
   const [width, setWidth] = useState(3);
+  const [connected, setConnected] = useState(false);
+  const [userCount, setUserCount] = useState(1);
+
+  const handleToolChange = (tool) => {
+    setActiveToolState(tool);
+    activeToolRef.current = tool;
+    setActiveTool(fabricCanvasRef.current, tool);
+  };
+
+  // After a shape is drawn: switch to Select and keep the shape selected,
+  // so it can be moved / resized / rotated right away
+  const handleShapeComplete = (shape) => {
+    handleToolChange("select");
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    canvas.setActiveObject(shape);
+    canvas.requestRenderAll();
+  };
 
   useEffect(() => {
     const canvas = initCanvas(canvasElRef, containerRef);
@@ -119,9 +78,20 @@ export default function Whiteboard() {
 
     const detachDrawingHandlers = attachDrawingHandlers(
       canvas,
-      () => activeToolRef.current
+      () => activeToolRef.current,
+      handleShapeComplete
     );
     const detachHistoryHandlers = attachHistoryHandlers(canvas);
+
+    // Real-time collaboration
+    connectSocket();
+    joinRoom(roomId);
+    const detachStatus = listenForConnectionStatus(setConnected);
+    const detachUsers = listenForRoomUsers(setUserCount);
+    const detachSync = attachCanvasSync(canvas, {
+      roomId,
+      getActiveTool: () => activeToolRef.current,
+    });
 
     const handleResize = () => resizeCanvas(canvas, containerRef);
     window.addEventListener("resize", handleResize);
@@ -130,131 +100,105 @@ export default function Whiteboard() {
       window.removeEventListener("resize", handleResize);
       detachDrawingHandlers();
       detachHistoryHandlers();
+      detachSync();
+      detachStatus();
+      detachUsers();
+      disconnectSocket();
       canvas.dispose();
       fabricCanvasRef.current = null;
     };
   }, []);
 
-  const handleToolChange = (tool) => {
-    setActiveToolState(tool);
-    activeToolRef.current = tool;
-    setActiveTool(fabricCanvasRef.current, tool);
+  const handleShapeChange = (shape) => {
+    setActiveShapeState(shape);
+    setShapeType(shape);
   };
 
-  const handleShapeChange = (e) => {
-    setActiveShapeState(e.target.value);
-    setShapeType(e.target.value);
+  const handleColorChange = (value) => {
+    setColor(value);
+    setStrokeColor(fabricCanvasRef.current, value);
   };
 
-  const handleColorChange = (e) => {
-    setColor(e.target.value);
-    setStrokeColor(fabricCanvasRef.current, e.target.value);
-  };
-
-  const handleWidthChange = (e) => {
-    const value = Number(e.target.value);
+  const handleWidthChange = (value) => {
     setWidth(value);
     setStrokeWidth(fabricCanvasRef.current, value);
   };
 
-  const handleUndo = () => undo(fabricCanvasRef.current);
-  const handleRedo = () => redo(fabricCanvasRef.current);
-  const handleClear = () => clearCanvas(fabricCanvasRef.current);
+  // Objects are rebuilt after undo/redo/load, so re-apply the active tool
+  const reapplyTool = () =>
+    setActiveTool(fabricCanvasRef.current, activeToolRef.current);
+
+  // Send the whole board to collaborators
+  const syncBoard = () => broadcastFullBoard(fabricCanvasRef.current, roomId);
+
+  const afterRestore = () => {
+    reapplyTool();
+    syncBoard();
+  };
+
+  const afterLoad = () => {
+    reapplyTool();
+    pushToHistory(fabricCanvasRef.current);
+    syncBoard();
+  };
+
+  const handleUndo = () => undo(fabricCanvasRef.current, afterRestore);
+  const handleRedo = () => redo(fabricCanvasRef.current, afterRestore);
+  const handleClear = () => {
+    clearCanvas(fabricCanvasRef.current);
+    syncBoard();
+  };
 
   const handleSave = () => saveToLocalStorage(fabricCanvasRef.current);
-  const handleLoad = () => loadFromLocalStorage(fabricCanvasRef.current);
+  const handleLoad = () => loadFromLocalStorage(fabricCanvasRef.current, afterLoad);
 
-  const handleExport = () => downloadAsFile(fabricCanvasRef.current);
+  const handleExportJSON = () => downloadAsFile(fabricCanvasRef.current);
+  const handleExportPNG = () => exportAsPNG(fabricCanvasRef.current);
+
   const handleImportClick = () => fileInputRef.current?.click();
   const handleImportFile = (e) => {
     const file = e.target.files?.[0];
-    if (file) loadFromFile(fabricCanvasRef.current, file);
+    if (file) loadFromFile(fabricCanvasRef.current, file, afterLoad);
     e.target.value = "";
   };
 
+  const handleCopyLink = () => navigator.clipboard.writeText(window.location.href);
+
   return (
-    <div style={styles.wrapper}>
-      <div style={styles.toolbar}>
-        {TOOLS.map((tool) => (
-          <button
-            key={tool}
-            style={
-              activeTool === tool
-                ? { ...styles.toolBtn, ...styles.toolBtnActive }
-                : styles.toolBtn
-            }
-            onClick={() => handleToolChange(tool)}
-          >
-            {tool}
-          </button>
-        ))}
+    <div className="whiteboard-wrapper">
+      <Toolbar
+        tools={TOOLS}
+        activeTool={activeTool}
+        onToolChange={handleToolChange}
+        shapes={SHAPES}
+        activeShape={activeShape}
+        onShapeChange={handleShapeChange}
+        color={color}
+        onColorChange={handleColorChange}
+        width={width}
+        onWidthChange={handleWidthChange}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onClear={handleClear}
+        onSave={handleSave}
+        onLoad={handleLoad}
+        onExportJSON={handleExportJSON}
+        onImport={handleImportClick}
+        onExportPNG={handleExportPNG}
+        connected={connected}
+        userCount={userCount}
+        onCopyLink={handleCopyLink}
+      />
 
-        {activeTool === "shape" && (
-          <select
-            style={styles.select}
-            value={activeShape}
-            onChange={handleShapeChange}
-          >
-            {SHAPES.map((shape) => (
-              <option key={shape} value={shape}>
-                {shape}
-              </option>
-            ))}
-          </select>
-        )}
+      <input
+        type="file"
+        accept="application/json"
+        ref={fileInputRef}
+        hidden
+        onChange={handleImportFile}
+      />
 
-        <input
-          type="color"
-          style={styles.colorInput}
-          value={color}
-          onChange={handleColorChange}
-        />
-
-        <input
-          type="range"
-          min="1"
-          max="30"
-          style={styles.widthInput}
-          value={width}
-          onChange={handleWidthChange}
-        />
-
-        <div style={styles.divider} />
-
-        <button style={styles.actionBtn} onClick={handleUndo}>
-          Undo
-        </button>
-        <button style={styles.actionBtn} onClick={handleRedo}>
-          Redo
-        </button>
-        <button style={styles.actionBtn} onClick={handleClear}>
-          Clear
-        </button>
-
-        <div style={styles.divider} />
-
-        <button style={styles.actionBtn} onClick={handleSave}>
-          Save
-        </button>
-        <button style={styles.actionBtn} onClick={handleLoad}>
-          Load
-        </button>
-        <button style={styles.actionBtn} onClick={handleExport}>
-          Export
-        </button>
-        <button style={styles.actionBtn} onClick={handleImportClick}>
-          Import
-        </button>
-        <input
-          type="file"
-          accept="application/json"
-          ref={fileInputRef}
-          style={{ display: "none" }}
-          onChange={handleImportFile}
-        />
-      </div>
-
-      <div style={styles.canvasContainer} ref={containerRef}>
+      <div className="whiteboard-canvas-container" ref={containerRef}>
         <canvas ref={canvasElRef} />
       </div>
     </div>

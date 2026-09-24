@@ -1,5 +1,9 @@
 import { Canvas, PencilBrush } from "fabric";
 
+export function isTextObject(obj) {
+  return Boolean(obj) && typeof obj.type === "string" && obj.type.toLowerCase() === "itext";
+}
+
 export function initCanvas(canvasElRef, containerRef) {
   const canvas = new Canvas(canvasElRef.current, {
     isDrawingMode: false,
@@ -26,6 +30,9 @@ export function resizeCanvas(canvas, containerRef) {
 export function setActiveTool(canvas, toolName) {
   if (!canvas) return;
 
+  // Leaving Select: drop the current selection (also finishes any text editing)
+  if (toolName !== "select") canvas.discardActiveObject();
+
   switch (toolName) {
     case "pen":
       canvas.isDrawingMode = true;
@@ -47,8 +54,11 @@ export function setActiveTool(canvas, toolName) {
   }
 
   canvas.forEachObject((obj) => {
-    obj.selectable = toolName === "select";
-    obj.evented = toolName === "select";
+    // In the Text tool, existing text stays clickable so it can be edited
+    const interactive =
+      toolName === "select" || (toolName === "text" && isTextObject(obj));
+    obj.selectable = interactive;
+    obj.evented = interactive;
   });
 
   canvas.requestRenderAll();

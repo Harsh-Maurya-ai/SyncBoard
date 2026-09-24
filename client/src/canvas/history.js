@@ -2,19 +2,28 @@ let undoStack = [];
 let redoStack = [];
 let isRestoring = false;
 
+// "id" is kept so objects stay identifiable across undo/redo (needed for sync)
+function snapshot(canvas) {
+  return canvas.toObject(["id"]);
+}
+
+export function isHistoryRestoring() {
+  return isRestoring;
+}
+
 export function initHistory(canvas) {
-  undoStack = [canvas.toJSON()];
+  undoStack = [snapshot(canvas)];
   redoStack = [];
 }
 
 export function pushToHistory(canvas) {
   if (isRestoring) return;
-  undoStack.push(canvas.toJSON());
+  undoStack.push(snapshot(canvas));
   redoStack = [];
 }
 
 export function undo(canvas, onDone) {
-  if (undoStack.length <= 1) return;
+  if (isRestoring || undoStack.length <= 1) return;
   const current = undoStack.pop();
   redoStack.push(current);
   const previous = undoStack[undoStack.length - 1];
@@ -22,7 +31,7 @@ export function undo(canvas, onDone) {
 }
 
 export function redo(canvas, onDone) {
-  if (redoStack.length === 0) return;
+  if (isRestoring || redoStack.length === 0) return;
   const next = redoStack.pop();
   undoStack.push(next);
   restoreState(canvas, next, onDone);
@@ -35,13 +44,17 @@ export function clearCanvas(canvas) {
   pushToHistory(canvas);
 }
 
-function restoreState(canvas, state, onDone) {
+async function restoreState(canvas, state, onDone) {
   isRestoring = true;
-  canvas.loadFromJSON(state, () => {
+  try {
+    await canvas.loadFromJSON(state);
     canvas.renderAll();
+  } catch (err) {
+    console.error("Failed to restore state:", err);
+  } finally {
     isRestoring = false;
-    if (onDone) onDone();
-  });
+  }
+  if (onDone) onDone();
 }
 
 export function attachHistoryHandlers(canvas) {

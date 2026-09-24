@@ -1,13 +1,18 @@
 export function exportToJSON(canvas) {
-  return JSON.stringify(canvas.toJSON());
+  return JSON.stringify(canvas.toObject(["id"]));
 }
 
-export function loadFromJSON(canvas, json, onDone) {
-  const data = typeof json === "string" ? JSON.parse(json) : json;
-  canvas.loadFromJSON(data, () => {
+export async function loadFromJSON(canvas, json, onDone) {
+  try {
+    const data = typeof json === "string" ? JSON.parse(json) : json;
+    await canvas.loadFromJSON(data);
     canvas.renderAll();
     if (onDone) onDone();
-  });
+    return true;
+  } catch (err) {
+    console.error("Failed to load board:", err);
+    return false;
+  }
 }
 
 export function saveToLocalStorage(canvas, key = "syncboard-local-save") {
@@ -16,10 +21,14 @@ export function saveToLocalStorage(canvas, key = "syncboard-local-save") {
   return json;
 }
 
-export function loadFromLocalStorage(canvas, key = "syncboard-local-save") {
+export function loadFromLocalStorage(
+  canvas,
+  onDone,
+  key = "syncboard-local-save"
+) {
   const json = localStorage.getItem(key);
   if (!json) return false;
-  loadFromJSON(canvas, json);
+  loadFromJSON(canvas, json, onDone);
   return true;
 }
 

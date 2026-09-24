@@ -1,5 +1,6 @@
 import { Rect, Circle, Line, IText, Triangle, Group, Point } from "fabric";
 import { pushToHistory } from "./history";
+import { isTextObject } from "./canvasSetup";
 
 let isDrawing = false;
 let startPoint = null;
@@ -7,6 +8,15 @@ let activeShape = null;
 let currentShapeType = "rectangle";
 let currentStrokeColor = "#000000";
 let currentStrokeWidth = 3;
+let clickEndedEditing = false; // true when a click just finished editing a text box
+
+// Fabric 6+/7 use getScenePoint; older versions use getPointer
+function getPoint(canvas, opt) {
+  if (typeof canvas.getScenePoint === "function") {
+    return canvas.getScenePoint(opt.e);
+  }
+  return canvas.getPointer(opt.e);
+}
 
 export function setStrokeColor(canvas, color) {
   currentStrokeColor = color;
@@ -104,16 +114,26 @@ function updateShapeGeometry(canvas, shape, shapeType, start, end) {
 }
 
 export function addTextBox(canvas, position) {
-  const text = new IText("Type here", {
+  // Starts empty (no placeholder text to delete) and is ready for typing
+  const text = new IText("", {
     left: position.x,
     top: position.y,
     fontSize: 20,
     fill: currentStrokeColor,
   });
+
+  // If the user clicks away without typing anything, remove the empty box
+  text.on("editing:exited", () => {
+    const isEmpty = !text.text || text.text.trim() === "";
+    if (isEmpty && !text.id) {
+      canvas.remove(text);
+      canvas.requestRenderAll();
+    }
+  });
+
   canvas.add(text);
   canvas.setActiveObject(text);
   text.enterEditing();
-  pushToHistory(canvas);
   return text;
 }
 
@@ -132,21 +152,27 @@ export function eraseObjectAt(canvas, position) {
 
 export function handleMouseDown(canvas, opt, toolName) {
   if (toolName === "eraser") {
-    const pointer = canvas.getPointer(opt.e);
-    eraseObjectAt(canvas, pointer);
+    eraseObjectAt(canvas, getPoint(canvas, opt));
     return;
   }
 
   if (toolName === "text") {
-    const pointer = canvas.getPointer(opt.e);
-    addTextBox(canvas, pointer);
+    // This click only finished editing another text box: don't start a new one
+    if (clickEndedEditing) {
+      clickEndedEditing = false;
+      return;
+    }
+    // Click on existing text: let Fabric select / edit it
+    if (opt.target && isTextObject(opt.target)) return;
+
+    addTextBox(canvas, getPoint(canvas, opt));
     return;
   }
 
   if (toolName !== "shape") return;
 
   isDrawing = true;
-  startPoint = canvas.getPointer(opt.e);
+  startPoint = getPoint(canvas, opt);
   activeShape = createShape(currentShapeType, startPoint, startPoint);
   canvas.add(activeShape);
 }
@@ -154,7 +180,7 @@ export function handleMouseDown(canvas, opt, toolName) {
 export function handleMouseMove(canvas, opt, toolName) {
   if (toolName !== "shape" || !isDrawing || !activeShape) return;
 
-  const pointer = canvas.getPointer(opt.e);
+  const pointer = getPoint(canvas, opt);
   activeShape = updateShapeGeometry(
     canvas,
     activeShape,
@@ -165,28 +191,46 @@ export function handleMouseMove(canvas, opt, toolName) {
   canvas.requestRenderAll();
 }
 
-export function handleMouseUp(canvas, toolName) {
+export function handleMouseUp(canvas, toolName, onShapeComplete) {
   if (toolName !== "shape" || !activeShape) return;
 
-  activeShape.set({ selectable: true, evented: true });
-  canvas.setActiveObject(activeShape);
+  const finished = activeShape;
   isDrawing = false;
   activeShape = null;
   startPoint = null;
+
+  // A plain click without dragging makes an empty shape: discard it
+  if ((finished.width || 0) < 3 && (finished.height || 0) < 3) {
+    canvas.remove(finished);
+    canvas.requestRenderAll();
+    return;
+  }
+
+  finished.set({ selectable: true, evented: true });
   canvas.requestRenderAll();
   pushToHistory(canvas);
+
+  // Lets the UI switch to the Select tool and select this shape
+  if (onShapeComplete) onShapeComplete(finished);
 }
 
-export function attachDrawingHandlers(canvas, getActiveTool) {
+export function attachDrawingHandlers(canvas, getActiveTool, onShapeComplete) {
+  // Runs before Fabric processes the click: remember if a text box was being edited
+  const onMouseDownBefore = () => {
+    const active = canvas.getActiveObject();
+    clickEndedEditing = Boolean(active && active.isEditing);
+  };
   const onMouseDown = (opt) => handleMouseDown(canvas, opt, getActiveTool());
   const onMouseMove = (opt) => handleMouseMove(canvas, opt, getActiveTool());
-  const onMouseUp = () => handleMouseUp(canvas, getActiveTool());
+  const onMouseUp = () => handleMouseUp(canvas, getActiveTool(), onShapeComplete);
 
+  canvas.on("mouse:down:before", onMouseDownBefore);
   canvas.on("mouse:down", onMouseDown);
   canvas.on("mouse:move", onMouseMove);
   canvas.on("mouse:up", onMouseUp);
 
   return () => {
+    canvas.off("mouse:down:before", onMouseDownBefore);
     canvas.off("mouse:down", onMouseDown);
     canvas.off("mouse:move", onMouseMove);
     canvas.off("mouse:up", onMouseUp);
