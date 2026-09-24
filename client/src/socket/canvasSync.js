@@ -1,7 +1,7 @@
 import { util } from "fabric";
 import { emitDrawEvent, listenForDrawEvents } from "./socketClient";
 import { isHistoryRestoring, pushToHistory } from "../canvas/history";
-import { isTextObject } from "../canvas/canvasSetup";
+import { isTextObject, isActiveSelection } from "../canvas/canvasSetup";
 
 const SYNC_PROPS = ["id"];
 
@@ -51,7 +51,7 @@ function emitNewObjects(canvas, roomId) {
 
 function emitModified(canvas, roomId, target) {
   // Several objects moved/scaled together
-  if (target.type && target.type.toLowerCase() === "activeselection") {
+  if (isActiveSelection(target)) {
     const ids = new Set(
       target
         .getObjects()

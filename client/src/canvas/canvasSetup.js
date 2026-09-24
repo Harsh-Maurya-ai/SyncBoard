@@ -1,7 +1,12 @@
-import { Canvas, PencilBrush } from "fabric";
+import { Canvas, PencilBrush, IText, ActiveSelection } from "fabric";
 
+// instanceof works in every Fabric version (obj.type is deprecated and may be missing in v7)
 export function isTextObject(obj) {
-  return Boolean(obj) && typeof obj.type === "string" && obj.type.toLowerCase() === "itext";
+  return obj instanceof IText;
+}
+
+export function isActiveSelection(obj) {
+  return obj instanceof ActiveSelection;
 }
 
 export function initCanvas(canvasElRef, containerRef) {
