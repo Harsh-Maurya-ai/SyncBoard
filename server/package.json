@@ -8,8 +8,12 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
+    "dotenv": "^18.0.5",
     "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.10.3",
     "socket.io": "^4.8.1"
   }
 }

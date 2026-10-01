@@ -30,8 +30,17 @@ import {
   getRoomId,
   listenForConnectionStatus,
   listenForRoomUsers,
+  listenForStateRequest,
+  sendBoardState,
+  listenForBoardState,
 } from "../socket/socketClient";
-import { attachCanvasSync, broadcastFullBoard } from "../socket/canvasSync";
+import {
+  attachCanvasSync,
+  broadcastFullBoard,
+  getFullBoardState,
+  applyRemoteDrawEvent,
+} from "../socket/canvasSync";
+import { attachCursorSync } from "../socket/cursorSync";
 
 const TOOLS = ["select", "pen", "eraser", "shape", "text"];
 const SHAPES = ["rectangle", "circle", "line", "arrow"];
@@ -88,9 +97,22 @@ export default function Whiteboard() {
     joinRoom(roomId);
     const detachStatus = listenForConnectionStatus(setConnected);
     const detachUsers = listenForRoomUsers(setUserCount);
-    const detachSync = attachCanvasSync(canvas, {
+        const detachSync = attachCanvasSync(canvas, {
       roomId,
       getActiveTool: () => activeToolRef.current,
+    });
+
+    // Live cursors (Day 12)
+        const detachCursors = attachCursorSync(containerRef.current);
+
+    // Sync-on-join (Day 13-14): answer a new joiner's request for the board,
+    // and apply the board a peer sends us when we ARE the new joiner
+    const detachStateRequest = listenForStateRequest(({ requesterId }) => {
+      const state = getFullBoardState(fabricCanvasRef.current);
+      if (state) sendBoardState(requesterId, state);
+    });
+    const detachStateSync = listenForBoardState((state) => {
+      applyRemoteDrawEvent(fabricCanvasRef.current, state, () => activeToolRef.current);
     });
 
     const handleResize = () => resizeCanvas(canvas, containerRef);
@@ -101,6 +123,9 @@ export default function Whiteboard() {
       detachDrawingHandlers();
       detachHistoryHandlers();
       detachSync();
+      detachCursors();
+      detachStateRequest();
+      detachStateSync();
       detachStatus();
       detachUsers();
       disconnectSocket();

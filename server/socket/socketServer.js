@@ -1,5 +1,10 @@
 import { Server } from "socket.io";
 import { registerDrawEvents } from "./drawEvents.js";
+import {
+  handleUserJoined,
+  handleUserLeft,
+  registerPresenceEvents,
+} from "./presence.js";
 
 export function initSocketServer(httpServer, allowedOrigins) {
   const io = new Server(httpServer, {
@@ -17,6 +22,7 @@ function handleConnection(io, socket) {
 
   socket.on("room:join", (roomId) => joinRoom(io, socket, roomId));
   registerDrawEvents(socket);
+  registerPresenceEvents(io, socket);
   socket.on("disconnect", (reason) => handleDisconnect(io, socket, reason));
 }
 
@@ -39,12 +45,14 @@ export function joinRoom(io, socket, roomId) {
 
   if (previous) {
     socket.leave(previous);
+    handleUserLeft(io, socket, previous);
     emitRoomUsers(io, previous);
   }
 
   socket.join(roomId);
   socket.data.roomId = roomId;
   console.log(`[socket] ${socket.id} joined room ${roomId}`);
+  handleUserJoined(io, socket, roomId);
   emitRoomUsers(io, roomId);
 }
 
@@ -52,5 +60,8 @@ export function joinRoom(io, socket, roomId) {
 export function handleDisconnect(io, socket, reason) {
   console.log(`[socket] disconnected: ${socket.id} (${reason})`);
   const roomId = socket.data.roomId;
-  if (roomId) emitRoomUsers(io, roomId);
+  if (roomId) {
+    handleUserLeft(io, socket, roomId);
+    emitRoomUsers(io, roomId);
+  }
 }

@@ -80,13 +80,22 @@ function emitModified(canvas, roomId, target) {
 }
 
 // Sends the whole board (used after undo / redo / clear / load)
-export function broadcastFullBoard(canvas, roomId) {
-  if (!canvas) return;
+// Builds a "replace the whole board" payload. Used to broadcast after
+// undo / redo / clear / load, and to answer a new joiner's state request.
+export function getFullBoardState(canvas) {
+  if (!canvas) return null;
   canvas.getObjects().forEach((obj) => {
     if (!obj.id) obj.id = generateId();
   });
   const { objects } = canvas.toObject(SYNC_PROPS);
-  emitDrawEvent(roomId, { type: "replace", objects });
+  return { type: "replace", objects };
+}
+
+// Sends the whole board to the room (used after undo / redo / clear / load)
+export function broadcastFullBoard(canvas, roomId) {
+  const state = getFullBoardState(canvas);
+  if (!state) return;
+  emitDrawEvent(roomId, state);
 }
 
 /* ------------------------------------------------------------------ */

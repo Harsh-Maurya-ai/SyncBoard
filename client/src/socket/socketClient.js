@@ -86,3 +86,42 @@ export function listenForRoomUsers(callback) {
   s.on("room:users", callback);
   return () => s.off("room:users", callback);
 }
+// Client sends its cursor coords on mousemove (caller is responsible for throttling)
+export function emitCursorMove(position) {
+  if (!socket || !socket.connected) return;
+  socket.emit("cursor:move", position);
+}
+
+// Client listens for other users' cursor positions. Returns an unsubscribe function.
+export function listenForCursorMoves(callback) {
+  const s = connectSocket();
+  s.on("cursor:move", callback);
+  return () => s.off("cursor:move", callback);
+}
+
+// Client listens for a collaborator disconnecting, so their cursor can be removed
+export function listenForCursorRemoved(callback) {
+  const s = connectSocket();
+  s.on("cursor:remove", callback);
+  return () => s.off("cursor:remove", callback);
+}
+
+// New joiner: the server asks an existing peer to send the current board
+export function listenForStateRequest(callback) {
+  const s = connectSocket();
+  s.on("board:provide-state", callback);
+  return () => s.off("board:provide-state", callback);
+}
+
+// Existing peer: sends this client's board state to the socket that requested it
+export function sendBoardState(requesterId, boardState) {
+  if (!socket || !socket.connected) return;
+  socket.emit("board:respond-state", { requesterId, boardState });
+}
+
+// New joiner: receives the board state a peer sent in response to our join
+export function listenForBoardState(callback) {
+  const s = connectSocket();
+  s.on("board:state", callback);
+  return () => s.off("board:state", callback);
+}

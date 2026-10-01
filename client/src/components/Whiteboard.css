@@ -13,3 +13,34 @@
   overflow: hidden;
   background: #f4f4f4;
 }
+/* Remote collaborator cursors (Day 12) */
+.remote-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 20;
+  color: var(--cursor-color, #1971c2);
+  transition: transform 60ms linear;
+  will-change: transform;
+}
+
+.remote-cursor svg {
+  fill: currentColor;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+}
+
+.remote-cursor-label {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: currentColor;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+  text-transform: uppercase;
+}

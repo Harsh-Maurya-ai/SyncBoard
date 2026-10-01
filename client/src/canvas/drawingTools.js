@@ -11,7 +11,7 @@ let currentStrokeWidth = 3;
 let clickEndedEditing = false; // true when a click just finished editing a text box
 
 // Fabric 6+/7 use getScenePoint; older versions use getPointer
-function getPoint(canvas, opt) {
+export function getPoint(canvas, opt) {
   if (typeof canvas.getScenePoint === "function") {
     return canvas.getScenePoint(opt.e);
   }
