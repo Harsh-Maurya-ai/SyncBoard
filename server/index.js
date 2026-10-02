@@ -17,7 +17,8 @@ const ALLOWED_ORIGINS = (
 
 const app = express();
 app.use(cors({ origin: ALLOWED_ORIGINS }));
-app.use(express.json());
+// Whole-board saves can be large (many freehand strokes), the 100kb default is too small
+app.use(express.json({ limit: "10mb" }));
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
@@ -27,7 +28,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/boards", boardRoutes);
 
 const httpServer = http.createServer(app);
-initSocketServer(httpServer, ALLOWED_ORIGINS);
+const io = initSocketServer(httpServer, ALLOWED_ORIGINS);
+app.set("io", io); // controllers use it to update live connections when permissions change
 
 mongoose
   .connect(MONGODB_URI)

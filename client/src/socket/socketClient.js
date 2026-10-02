@@ -1,4 +1,5 @@
 import { io } from "socket.io-client";
+import { clearToken, getToken } from "../api/client";
 
 const DEFAULT_SERVER_URL =
   import.meta.env.VITE_SERVER_URL || "http://localhost:5000";
@@ -6,33 +7,28 @@ const DEFAULT_SERVER_URL =
 let socket = null;
 let currentRoomId = null;
 
-// Reads ?room=xxxx from the URL. If missing, creates one and puts it in the URL
-// so the link can be shared with collaborators.
-export function getRoomId() {
-  const params = new URLSearchParams(window.location.search);
-  let room = params.get("room");
-
-  if (!room) {
-    room = Math.random().toString(36).slice(2, 8);
-    params.set("room", room);
-    window.history.replaceState(
-      {},
-      "",
-      `${window.location.pathname}?${params.toString()}`
-    );
-  }
-  return room;
-}
-
-// Client connects to the Socket.io server
+// Client connects to the Socket.io server (logged-in users only: the JWT goes
+// in the handshake and the server rejects the connection without it)
 export function connectSocket(serverUrl = DEFAULT_SERVER_URL) {
   if (socket) return socket;
 
-  socket = io(serverUrl);
+  socket = io(serverUrl, {
+    // a function, so a reconnect always sends the latest token
+    auth: (cb) => cb({ token: getToken() }),
+  });
 
   // (Re)join the room every time we connect, including after a reconnect
   socket.on("connect", () => {
     if (currentRoomId) socket.emit("room:join", currentRoomId);
+  });
+
+  // Token missing / expired: stop retrying and send the user to the login page
+  socket.on("connect_error", (err) => {
+    if (err.message === "Unauthorized") {
+      socket.disconnect();
+      clearToken();
+      window.dispatchEvent(new Event("syncboard:logout"));
+    }
   });
 
   return socket;
@@ -46,6 +42,7 @@ export function disconnectSocket() {
   currentRoomId = null;
 }
 
+// roomId is the board id
 export function joinRoom(roomId) {
   currentRoomId = roomId;
   if (socket && socket.connected) socket.emit("room:join", roomId);
@@ -86,6 +83,21 @@ export function listenForRoomUsers(callback) {
   s.on("room:users", callback);
   return () => s.off("room:users", callback);
 }
+
+// The owner changed your role while you're on the board: callback({ role })
+export function listenForRoomRole(callback) {
+  const s = connectSocket();
+  s.on("room:role", callback);
+  return () => s.off("room:role", callback);
+}
+
+// You were removed from the board (or it was deleted): callback({ reason })
+export function listenForRoomKicked(callback) {
+  const s = connectSocket();
+  s.on("room:kicked", callback);
+  return () => s.off("room:kicked", callback);
+}
+
 // Client sends its cursor coords on mousemove (caller is responsible for throttling)
 export function emitCursorMove(position) {
   if (!socket || !socket.connected) return;

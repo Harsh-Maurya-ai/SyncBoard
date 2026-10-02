@@ -47,6 +47,7 @@ export function setActiveTool(canvas, toolName) {
     case "eraser":
     case "shape":
     case "text":
+    case "view": // read-only mode for viewers: look, but don't touch
       canvas.isDrawingMode = false;
       canvas.selection = false;
       break;

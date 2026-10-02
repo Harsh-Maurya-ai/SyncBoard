@@ -42,7 +42,7 @@
   color: #fff;
 }
 
-/* Action buttons (undo, redo, clear, save, load, export...) */
+/* Action buttons (undo, redo, clear, save, export...) */
 .toolbar-action-btn {
   padding: 6px 14px;
   border-radius: 6px;
@@ -65,6 +65,16 @@
 
 .toolbar-action-btn.primary:hover {
   background: #37b24d;
+}
+
+.toolbar-action-btn.share {
+  background: #4f7cff;
+  border-color: #4f7cff;
+  color: #fff;
+}
+
+.toolbar-action-btn.share:hover {
+  background: #6b92ff;
 }
 
 .toolbar-action-btn.danger {
@@ -130,7 +140,55 @@
 .toolbar-preview-dot {
   border-radius: 50%;
 }
-/* ---------- Collaboration status (Day 10) ---------- */
+
+/* Board title + your role */
+.toolbar-title {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.toolbar-role {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #444;
+  color: #ddd;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.toolbar-role.owner {
+  background: #2f9e44;
+  color: #fff;
+}
+
+.toolbar-role.editor {
+  background: #1971c2;
+  color: #fff;
+}
+
+/* Auto-save status */
+.toolbar-save-status {
+  color: #aaa;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.toolbar-save-status.saving {
+  color: #ffd43b;
+}
+
+.toolbar-save-status.error {
+  color: #ff8787;
+}
+
+/* ---------- Collaboration status ---------- */
 .toolbar-spacer {
   flex: 1;
 }

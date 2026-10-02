@@ -1,3 +1,5 @@
+import { canEdit } from "../utils/access.js";
+
 const CURSOR_COLORS = [
   "#e03131",
   "#f08c00",
@@ -23,15 +25,22 @@ function assignColor(roomId, socketId) {
 }
 
 function releaseColor(roomId, socketId) {
-  roomColors.get(roomId)?.delete(socketId);
+  const colors = roomColors.get(roomId);
+  if (!colors) return;
+  colors.delete(socketId);
+  if (colors.size === 0) roomColors.delete(roomId);
 }
 
-// New joiner asks for the current board state: the server picks any other
-// member already in the room and asks THEM to send their board over.
+// New joiner asks for the current board state: the server picks another member
+// who is allowed to edit (viewers never seed a board) and asks THEM to send it.
 function requestCanvasState(io, socket, roomId) {
   const room = io.sockets.adapter.rooms.get(roomId);
-  const providerId = room ? [...room].find((id) => id !== socket.id) : null;
-  if (!providerId) return; // first person in the room — nothing to sync yet
+  const providerId = room
+    ? [...room].find(
+        (id) => id !== socket.id && canEdit(io.sockets.sockets.get(id)?.data.role)
+      )
+    : null;
+  if (!providerId) return; // nobody to ask: the joiner keeps the version saved in MongoDB
   io.to(providerId).emit("board:provide-state", { requesterId: socket.id });
 }
 
@@ -54,8 +63,15 @@ export function handleUserLeft(io, socket, roomId) {
 
 export function registerPresenceEvents(io, socket) {
   // A peer responding to "board:provide-state" with its current board
-  socket.on("board:respond-state", ({ requesterId, boardState } = {}) => {
+  socket.on("board:respond-state", (payload) => {
+    const { requesterId, boardState } = payload || {};
     if (typeof requesterId !== "string" || !boardState) return;
+    if (!canEdit(socket.data.role)) return;
+
+    // Only hand the board to someone in the same room
+    const requester = io.sockets.sockets.get(requesterId);
+    if (!requester || requester.data.roomId !== socket.data.roomId) return;
+
     syncCanvasState(io, requesterId, boardState);
   });
 

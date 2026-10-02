@@ -18,3 +18,21 @@ body {
   background: #ffffff;
   font-family: system-ui, "Segoe UI", Roboto, sans-serif;
 }
+
+/* Full-screen message used while loading / on errors */
+.page-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  background: #f4f4f4;
+  color: #333;
+  font-size: 16px;
+}
+
+.page-message a {
+  color: #4f7cff;
+}
