@@ -1,4 +1,7 @@
 {
+  "engines": {
+    "node": "v22.19.0"
+  },
   "name": "syncboard-server",
   "version": "1.0.0",
   "type": "module",
