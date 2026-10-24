@@ -18,7 +18,8 @@ import {
   pushToHistory,
 } from "../canvas/history";
 import { downloadAsFile, loadFromFile, loadFromJSON } from "../canvas/serialize";
-import { exportBoardAsPNG, exportBoardAsPDF, autoSave } from "../canvas/export";
+import { exportBoardAsPNG, exportBoardAsPDF } from "../canvas/export"; // CHANGED: autoSave moved out
+import { autoSave } from "../canvas/autoSave"; // CHANGED: new file
 import {
   connectSocket,
   disconnectSocket,
@@ -175,9 +176,29 @@ export default function Whiteboard({ board, onBack }) {
       );
 
       // 4. Auto-save to MongoDB (viewers never save)
+      // CHANGED: react to errors the server will never accept, instead of retrying forever
+      const handleSaveStatus = (status, info) => {
+        setSaveStatus(status);
+        if (!info?.permanent) return;
+
+        if (info.httpStatus === 403) {
+          // The server says we are view-only: match the screen to that
+          roleRef.current = "viewer";
+          setRole("viewer");
+          handleToolChange("view");
+          setNotice(
+            "You have view-only access to this board, so your changes can't be saved."
+          );
+        } else if (info.httpStatus === 404) {
+          setNotice("This board no longer exists.");
+        } else if (info.httpStatus === 413) {
+          setNotice("This board is too large to save.");
+        }
+      };
+
       const saver = autoSave(canvas, roomId, {
         canSave: () => roleRef.current !== "viewer",
-        onStatus: setSaveStatus,
+        onStatus: handleSaveStatus, // CHANGED
       });
       saverRef.current = saver;
 
