@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import Toolbar from "./Toolbar";
 import ShareDialog from "./ShareDialog";
+import ChatPanel from "./ChatPanel"; // CHAT
 import "./Whiteboard.css";
+import { useAuth } from "../auth/authContext"; // CHAT
+import useChat from "../chat/useChat"; // CHAT
 import { initCanvas, resizeCanvas, setActiveTool } from "../canvas/canvasSetup";
 import {
   attachDrawingHandlers,
@@ -46,6 +49,7 @@ const SHAPES = ["rectangle", "circle", "line", "arrow"];
 // board = { _id, title, role, canvasJSON } as returned by GET /api/boards/:id
 export default function Whiteboard({ board, onBack }) {
   const roomId = board._id; // one Socket.io room per board
+  const { user } = useAuth(); // CHAT
   const canvasElRef = useRef(null);
   const containerRef = useRef(null);
   const fabricCanvasRef = useRef(null);
@@ -65,6 +69,14 @@ export default function Whiteboard({ board, onBack }) {
   const [saveStatus, setSaveStatus] = useState("saved");
   const [notice, setNotice] = useState("");
   const [showShare, setShowShare] = useState(false);
+  const [showChat, setShowChat] = useState(false); // CHAT
+
+  // CHAT: messages + unread counter (must stay above the main useEffect)
+  const {
+    messages: chatMessages,
+    unread: chatUnread,
+    sendMessage,
+  } = useChat({ myUserId: user?.id, isOpen: showChat });
 
   const handleToolChange = (tool) => {
     setActiveToolState(tool);
@@ -308,6 +320,9 @@ export default function Whiteboard({ board, onBack }) {
         userCount={userCount}
         onShare={() => setShowShare(true)}
         onBack={onBack}
+        chatOpen={showChat} // CHAT
+        chatUnread={chatUnread} // CHAT
+        onToggleChat={() => setShowChat((open) => !open)} // CHAT
       />
 
       <input
@@ -321,6 +336,17 @@ export default function Whiteboard({ board, onBack }) {
       <div className="whiteboard-canvas-container" ref={containerRef}>
         <canvas ref={canvasElRef} />
       </div>
+
+      {/* CHAT: floating chat window */}
+      {showChat && (
+        <ChatPanel
+          messages={chatMessages}
+          myUserId={user?.id}
+          connected={connected}
+          onSend={sendMessage}
+          onClose={() => setShowChat(false)}
+        />
+      )}
 
       {showShare && role === "owner" && (
         <ShareDialog boardId={roomId} onClose={() => setShowShare(false)} />

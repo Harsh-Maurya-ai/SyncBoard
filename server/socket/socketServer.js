@@ -4,6 +4,7 @@ import User from "../models/User.js";
 import Board from "../models/Board.js";
 import { getUserRole, isValidId } from "../utils/access.js";
 import { registerDrawEvents } from "./drawEvents.js";
+import { registerChatEvents, sendChatHistory } from "./chatEvents.js"; // CHAT
 import {
   handleUserJoined,
   handleUserLeft,
@@ -49,6 +50,7 @@ function handleConnection(io, socket) {
     );
   });
   registerDrawEvents(socket);
+  registerChatEvents(io, socket); // CHAT
   registerPresenceEvents(io, socket);
   socket.on("disconnect", (reason) => handleDisconnect(io, socket, reason));
 }
@@ -90,6 +92,7 @@ export async function joinRoom(io, socket, roomId) {
   console.log(`[socket] ${socket.id} joined room ${roomId} as ${role}`);
   handleUserJoined(io, socket, roomId);
   emitRoomUsers(io, roomId);
+  sendChatHistory(socket, roomId); // CHAT: new joiner gets the recent messages
 }
 
 // Cleans up when a user leaves

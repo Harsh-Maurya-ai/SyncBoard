@@ -45,6 +45,9 @@ export default function Toolbar({
   userCount,
   onShare,
   onBack,
+  chatOpen, // CHAT
+  chatUnread, // CHAT
+  onToggleChat, // CHAT
 }) {
   const canEdit = role !== "viewer";
   const isOwner = role === "owner";
@@ -219,6 +222,21 @@ export default function Toolbar({
           <span className="toolbar-status-dot" />
           {connected ? `Live · ${userCount} online` : "Offline"}
         </span>
+
+        {/* CHAT: toggle button with unread badge */}
+        <button
+          type="button"
+          className={`toolbar-action-btn chat-toggle-btn${chatOpen ? " active" : ""}`}
+          onClick={onToggleChat}
+        >
+          Chat
+          {chatUnread > 0 && (
+            <span className="chat-unread-badge">
+              {chatUnread > 99 ? "99+" : chatUnread}
+            </span>
+          )}
+        </button>
+
         {isOwner && (
           <button
             type="button"

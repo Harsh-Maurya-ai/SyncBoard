@@ -137,3 +137,28 @@ export function listenForBoardState(callback) {
   s.on("board:state", callback);
   return () => s.off("board:state", callback);
 }
+
+/* ------------------------------------------------------------------ */
+/* CHAT                                                                */
+/* ------------------------------------------------------------------ */
+
+// CHAT: sends a chat message to everyone on the board. Returns false if offline.
+export function emitChatMessage(text) {
+  if (!socket || !socket.connected) return false;
+  socket.emit("chat:send", { text });
+  return true;
+}
+
+// CHAT: a new message arrived: callback({ id, userId, userName, text, createdAt })
+export function listenForChatMessage(callback) {
+  const s = connectSocket();
+  s.on("chat:message", callback);
+  return () => s.off("chat:message", callback);
+}
+
+// CHAT: the recent messages of the board, sent once right after you join
+export function listenForChatHistory(callback) {
+  const s = connectSocket();
+  s.on("chat:history", callback);
+  return () => s.off("chat:history", callback);
+}
