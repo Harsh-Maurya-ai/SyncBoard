@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import Toolbar from "./Toolbar";
 import ShareDialog from "./ShareDialog";
-import ChatPanel from "./ChatPanel"; // CHAT
+import ChatPanel from "./ChatPanel";
+import SizeRail from "./SizeRail"; // UI
+import StatusBar from "./StatusBar"; // UI
 import "./Whiteboard.css";
-import { useAuth } from "../auth/authContext"; // CHAT
-import useChat from "../chat/useChat"; // CHAT
+import { useAuth } from "../auth/authContext";
+import useChat from "../chat/useChat";
 import { initCanvas, resizeCanvas, setActiveTool } from "../canvas/canvasSetup";
 import {
   attachDrawingHandlers,
@@ -21,8 +23,8 @@ import {
   pushToHistory,
 } from "../canvas/history";
 import { downloadAsFile, loadFromFile, loadFromJSON } from "../canvas/serialize";
-import { exportBoardAsPNG, exportBoardAsPDF } from "../canvas/export"; // CHANGED: autoSave moved out
-import { autoSave } from "../canvas/autoSave"; // CHANGED: new file
+import { exportBoardAsPNG, exportBoardAsPDF } from "../canvas/export";
+import { autoSave } from "../canvas/autoSave";
 import {
   connectSocket,
   disconnectSocket,
@@ -49,7 +51,7 @@ const SHAPES = ["rectangle", "circle", "line", "arrow"];
 // board = { _id, title, role, canvasJSON } as returned by GET /api/boards/:id
 export default function Whiteboard({ board, onBack }) {
   const roomId = board._id; // one Socket.io room per board
-  const { user } = useAuth(); // CHAT
+  const { user } = useAuth();
   const canvasElRef = useRef(null);
   const containerRef = useRef(null);
   const fabricCanvasRef = useRef(null);
@@ -69,9 +71,11 @@ export default function Whiteboard({ board, onBack }) {
   const [saveStatus, setSaveStatus] = useState("saved");
   const [notice, setNotice] = useState("");
   const [showShare, setShowShare] = useState(false);
-  const [showChat, setShowChat] = useState(false); // CHAT
+  const [showChat, setShowChat] = useState(false);
 
-  // CHAT: messages + unread counter (must stay above the main useEffect)
+  const canEdit = role !== "viewer"; // UI
+
+  // Chat: messages + unread counter (must stay above the main useEffect)
   const {
     messages: chatMessages,
     unread: chatUnread,
@@ -188,7 +192,6 @@ export default function Whiteboard({ board, onBack }) {
       );
 
       // 4. Auto-save to MongoDB (viewers never save)
-      // CHANGED: react to errors the server will never accept, instead of retrying forever
       const handleSaveStatus = (status, info) => {
         setSaveStatus(status);
         if (!info?.permanent) return;
@@ -210,7 +213,7 @@ export default function Whiteboard({ board, onBack }) {
 
       const saver = autoSave(canvas, roomId, {
         canSave: () => roleRef.current !== "viewer",
-        onStatus: handleSaveStatus, // CHANGED
+        onStatus: handleSaveStatus,
       });
       saverRef.current = saver;
 
@@ -234,6 +237,12 @@ export default function Whiteboard({ board, onBack }) {
       fabricCanvasRef.current = null;
     };
   }, []);
+
+  // UI: the drawing sheet gets narrower/wider when the size rail appears or
+  // disappears (role changed live), so fit the canvas to it again
+  useEffect(() => {
+    resizeCanvas(fabricCanvasRef.current, containerRef);
+  }, [canEdit]);
 
   const handleShapeChange = (shape) => {
     setActiveShapeState(shape);
@@ -305,24 +314,19 @@ export default function Whiteboard({ board, onBack }) {
         onShapeChange={handleShapeChange}
         color={color}
         onColorChange={handleColorChange}
-        width={width}
-        onWidthChange={handleWidthChange}
         onUndo={handleUndo}
         onRedo={handleRedo}
         onClear={handleClear}
         onSave={handleSave}
-        saveStatus={saveStatus}
         onExportJSON={handleExportJSON}
         onImport={handleImportClick}
         onExportPNG={handleExportPNG}
         onExportPDF={handleExportPDF}
-        connected={connected}
-        userCount={userCount}
         onShare={() => setShowShare(true)}
         onBack={onBack}
-        chatOpen={showChat} // CHAT
-        chatUnread={chatUnread} // CHAT
-        onToggleChat={() => setShowChat((open) => !open)} // CHAT
+        chatOpen={showChat}
+        chatUnread={chatUnread}
+        onToggleChat={() => setShowChat((open) => !open)}
       />
 
       <input
@@ -333,11 +337,29 @@ export default function Whiteboard({ board, onBack }) {
         onChange={handleImportFile}
       />
 
-      <div className="whiteboard-canvas-container" ref={containerRef}>
-        <canvas ref={canvasElRef} />
+      {/* UI: dark workspace + vertical size slider + white drawing sheet */}
+      <div className={`whiteboard-stage${canEdit ? " has-rail" : ""}`}>
+        {canEdit && (
+          <SizeRail
+            width={width}
+            color={color}
+            onWidthChange={handleWidthChange}
+          />
+        )}
+
+        <div className="whiteboard-canvas-container" ref={containerRef}>
+          <canvas ref={canvasElRef} />
+        </div>
       </div>
 
-      {/* CHAT: floating chat window */}
+      {/* UI: bottom status bar (live users + auto-save status) */}
+      <StatusBar
+        connected={connected}
+        userCount={userCount}
+        saveStatus={saveStatus}
+        canEdit={canEdit}
+      />
+
       {showChat && (
         <ChatPanel
           messages={chatMessages}

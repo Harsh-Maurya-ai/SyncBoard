@@ -1,0 +1,41 @@
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 14px;
+  border-top: 1px solid var(--wb-border);
+  background: var(--wb-surface);
+  color: var(--wb-muted);
+  font-size: 12px;
+}
+
+.status-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--wb-danger);
+}
+
+.status-live.online {
+  color: var(--wb-success);
+}
+
+.status-live.online .status-live-dot {
+  background: var(--wb-success);
+}
+
+.status-save.saving {
+  color: #ffd43b;
+}
+
+.status-save.error {
+  color: var(--wb-danger);
+}

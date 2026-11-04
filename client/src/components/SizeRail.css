@@ -1,0 +1,47 @@
+.size-rail {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 52px;
+  padding: 10px 0;
+  border: 1px solid var(--wb-border);
+  border-radius: 12px;
+  background: var(--wb-surface);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.size-rail-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.size-rail-dot {
+  display: block;
+  border-radius: 50%;
+}
+
+/* Vertical slider: top = thickest, bottom = thinnest */
+.size-rail-slider {
+  width: 20px;
+  height: min(220px, 35vh);
+  margin: 0;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  accent-color: var(--wb-accent);
+  cursor: pointer;
+}
+
+.size-rail-value {
+  color: var(--wb-muted);
+  font-size: 11px;
+}

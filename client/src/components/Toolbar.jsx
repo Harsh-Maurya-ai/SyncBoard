@@ -1,4 +1,5 @@
 import "./Toolbar.css";
+import Icon from "./Icons";
 
 const PRESET_COLORS = [
   "#000000",
@@ -9,14 +10,32 @@ const PRESET_COLORS = [
   "#9c36b5",
 ];
 
-const SAVE_LABELS = {
-  saved: "All changes saved",
-  saving: "Saving…",
-  error: "Save failed, retrying…",
+// Which icon each tool uses
+const TOOL_ICONS = {
+  select: "select",
+  pen: "pen",
+  eraser: "eraser",
+  shape: "shape",
+  text: "text",
 };
 
-function Divider() {
-  return <div className="toolbar-divider" />;
+// One ribbon section: buttons on top, small label underneath (like Paint)
+function Group({ label, children }) {
+  return (
+    <div className="toolbar-group">
+      <div className="toolbar-group-body">{children}</div>
+      <div className="toolbar-group-label">{label}</div>
+    </div>
+  );
+}
+
+function ActionButton({ icon, children, className = "", ...props }) {
+  return (
+    <button type="button" className={`toolbar-action-btn ${className}`} {...props}>
+      <Icon name={icon} size={16} />
+      {children}
+    </button>
+  );
 }
 
 export default function Toolbar({
@@ -30,205 +49,43 @@ export default function Toolbar({
   onShapeChange,
   color,
   onColorChange,
-  width,
-  onWidthChange,
   onUndo,
   onRedo,
   onClear,
   onSave,
-  saveStatus,
   onExportJSON,
   onImport,
   onExportPNG,
   onExportPDF,
-  connected,
-  userCount,
   onShare,
   onBack,
-  chatOpen, // CHAT
-  chatUnread, // CHAT
-  onToggleChat, // CHAT
+  chatOpen,
+  chatUnread,
+  onToggleChat,
 }) {
   const canEdit = role !== "viewer";
   const isOwner = role === "owner";
 
   return (
     <div className="toolbar">
-      {/* Board */}
-      <div className="toolbar-group">
-        <button type="button" className="toolbar-action-btn" onClick={onBack}>
-          ← Boards
-        </button>
+      {/* Top menu row */}
+      <div className="toolbar-menu">
+        <ActionButton icon="back" onClick={onBack}>
+          Boards
+        </ActionButton>
         <span className="toolbar-title" title={title}>
           {title}
         </span>
         <span className={`toolbar-role ${role}`}>{canEdit ? role : "view only"}</span>
-      </div>
 
-      {canEdit && (
-        <>
-          <Divider />
+        <div className="toolbar-spacer" />
 
-          {/* Tools */}
-          <div className="toolbar-group">
-            {tools.map((tool) => (
-              <button
-                key={tool}
-                type="button"
-                aria-pressed={activeTool === tool}
-                title={`${tool} tool`}
-                className={`toolbar-tool-btn${activeTool === tool ? " active" : ""}`}
-                onClick={() => onToolChange(tool)}
-              >
-                {tool}
-              </button>
-            ))}
-
-            {activeTool === "shape" && (
-              <select
-                className="toolbar-select"
-                value={activeShape}
-                onChange={(e) => onShapeChange(e.target.value)}
-                title="Shape type"
-              >
-                {shapes.map((shape) => (
-                  <option key={shape} value={shape}>
-                    {shape}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          <Divider />
-
-          {/* Color */}
-          <div className="toolbar-group">
-            {PRESET_COLORS.map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                title={preset}
-                aria-label={`Use color ${preset}`}
-                className={`toolbar-swatch${
-                  color.toLowerCase() === preset ? " active" : ""
-                }`}
-                style={{ background: preset }}
-                onClick={() => onColorChange(preset)}
-              />
-            ))}
-
-            <input
-              type="color"
-              title="Custom color"
-              className="toolbar-color-input"
-              value={color}
-              onChange={(e) => onColorChange(e.target.value)}
-            />
-          </div>
-
-          {/* Stroke width */}
-          <div className="toolbar-group">
-            <input
-              type="range"
-              min="1"
-              max="30"
-              title="Stroke width"
-              className="toolbar-width-input"
-              value={width}
-              onChange={(e) => onWidthChange(Number(e.target.value))}
-            />
-            <span className="toolbar-width-label">{width}px</span>
-            <div className="toolbar-preview" title="Brush preview">
-              <div
-                className="toolbar-preview-dot"
-                style={{ width, height: width, background: color }}
-              />
-            </div>
-          </div>
-
-          <Divider />
-
-          {/* History */}
-          <div className="toolbar-group">
-            <button type="button" className="toolbar-action-btn" onClick={onUndo}>
-              Undo
-            </button>
-            <button type="button" className="toolbar-action-btn" onClick={onRedo}>
-              Redo
-            </button>
-            <button
-              type="button"
-              className="toolbar-action-btn danger"
-              onClick={onClear}
-            >
-              Clear
-            </button>
-          </div>
-        </>
-      )}
-
-      <Divider />
-
-      {/* Save / export */}
-      <div className="toolbar-group">
-        {canEdit && (
-          <>
-            <button type="button" className="toolbar-action-btn" onClick={onSave}>
-              Save
-            </button>
-            <span className={`toolbar-save-status ${saveStatus}`}>
-              {SAVE_LABELS[saveStatus]}
-            </span>
-          </>
-        )}
-        <button
-          type="button"
-          className="toolbar-action-btn"
-          onClick={onExportJSON}
-        >
-          Export JSON
-        </button>
-        {canEdit && (
-          <button
-            type="button"
-            className="toolbar-action-btn"
-            onClick={onImport}
-          >
-            Import
-          </button>
-        )}
-        <button
-          type="button"
-          className="toolbar-action-btn primary"
-          onClick={onExportPNG}
-        >
-          Export PNG
-        </button>
-        <button
-          type="button"
-          className="toolbar-action-btn primary"
-          onClick={onExportPDF}
-        >
-          Export PDF
-        </button>
-      </div>
-
-      <div className="toolbar-spacer" />
-
-      {/* Collaboration status */}
-      <div className="toolbar-group">
-        <span className={`toolbar-status${connected ? " online" : ""}`}>
-          <span className="toolbar-status-dot" />
-          {connected ? `Live · ${userCount} online` : "Offline"}
-        </span>
-
-        {/* CHAT: toggle button with unread badge */}
         <button
           type="button"
           className={`toolbar-action-btn chat-toggle-btn${chatOpen ? " active" : ""}`}
           onClick={onToggleChat}
         >
+          <Icon name="chat" size={16} />
           Chat
           {chatUnread > 0 && (
             <span className="chat-unread-badge">
@@ -238,14 +95,123 @@ export default function Toolbar({
         </button>
 
         {isOwner && (
-          <button
-            type="button"
-            className="toolbar-action-btn share"
-            onClick={onShare}
-          >
+          <ActionButton icon="share" className="share" onClick={onShare}>
             Share
-          </button>
+          </ActionButton>
         )}
+      </div>
+
+      {/* Ribbon */}
+      <div className="toolbar-ribbon">
+        {canEdit && (
+          <>
+            <Group label="Tools">
+              {tools.map((tool) => (
+                <button
+                  key={tool}
+                  type="button"
+                  aria-pressed={activeTool === tool}
+                  aria-label={`${tool} tool`}
+                  title={`${tool} tool`}
+                  className={`toolbar-icon-btn${activeTool === tool ? " active" : ""}`}
+                  onClick={() => onToolChange(tool)}
+                >
+                  <Icon name={TOOL_ICONS[tool] || "select"} size={20} />
+                </button>
+              ))}
+
+              {activeTool === "shape" && (
+                <select
+                  className="toolbar-select"
+                  value={activeShape}
+                  onChange={(e) => onShapeChange(e.target.value)}
+                  title="Shape type"
+                >
+                  {shapes.map((shape) => (
+                    <option key={shape} value={shape}>
+                      {shape}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Group>
+
+            <Group label="Colors">
+              <input
+                type="color"
+                title="Custom color"
+                className="toolbar-color-input"
+                value={color}
+                onChange={(e) => onColorChange(e.target.value)}
+              />
+              {PRESET_COLORS.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  title={preset}
+                  aria-label={`Use color ${preset}`}
+                  className={`toolbar-swatch${
+                    color.toLowerCase() === preset ? " active" : ""
+                  }`}
+                  style={{ background: preset }}
+                  onClick={() => onColorChange(preset)}
+                />
+              ))}
+            </Group>
+
+            <Group label="History">
+              <button
+                type="button"
+                className="toolbar-icon-btn"
+                title="Undo"
+                aria-label="Undo"
+                onClick={onUndo}
+              >
+                <Icon name="undo" size={20} />
+              </button>
+              <button
+                type="button"
+                className="toolbar-icon-btn"
+                title="Redo"
+                aria-label="Redo"
+                onClick={onRedo}
+              >
+                <Icon name="redo" size={20} />
+              </button>
+              <button
+                type="button"
+                className="toolbar-icon-btn danger"
+                title="Clear board"
+                aria-label="Clear board"
+                onClick={onClear}
+              >
+                <Icon name="trash" size={20} />
+              </button>
+            </Group>
+          </>
+        )}
+
+        <Group label="File">
+          {canEdit && (
+            <>
+              <ActionButton icon="save" onClick={onSave}>
+                Save
+              </ActionButton>
+              <ActionButton icon="upload" onClick={onImport}>
+                Import
+              </ActionButton>
+            </>
+          )}
+          <ActionButton icon="json" onClick={onExportJSON}>
+            JSON
+          </ActionButton>
+          <ActionButton icon="image" className="primary" onClick={onExportPNG}>
+            PNG
+          </ActionButton>
+          <ActionButton icon="pdf" className="primary" onClick={onExportPDF}>
+            PDF
+          </ActionButton>
+        </Group>
       </div>
     </div>
   );

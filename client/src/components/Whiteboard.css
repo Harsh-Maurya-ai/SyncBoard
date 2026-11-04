@@ -1,18 +1,50 @@
+/* Theme colors for the whole board page (used by toolbar, rail, status bar, chat) */
 .whiteboard-wrapper {
+  --wb-bg: #171717;
+  --wb-surface: #202020;
+  --wb-surface-2: #2c2c2c;
+  --wb-border: #3a3a3a;
+  --wb-text: #e8e8e8;
+  --wb-muted: #9a9a9a;
+  --wb-accent: #4cc2ff;
+  --wb-accent-soft: rgba(76, 194, 255, 0.14);
+  --wb-danger: #ff7b7b;
+  --wb-success: #6ccb5f;
+
   position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 100%;
   overflow: hidden;
+  background: var(--wb-bg);
 }
 
-.whiteboard-canvas-container {
+/* Dark workspace around the white drawing sheet */
+.whiteboard-stage {
+  position: relative;
+  display: flex;
   flex: 1;
   min-height: 0;
+  padding: 16px;
+  background: var(--wb-bg);
+}
+
+/* Room for the vertical size slider on the left (editors only) */
+.whiteboard-stage.has-rail {
+  padding-left: 84px;
+}
+
+/* The white drawing sheet (the canvas fills it) */
+.whiteboard-canvas-container {
   position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
-  background: #f4f4f4;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 /* Remote collaborator cursors */
@@ -61,23 +93,25 @@
 .whiteboard-notice-box {
   max-width: 360px;
   padding: 24px;
-  border-radius: 10px;
-  background: #fff;
+  border-radius: 12px;
+  background: var(--wb-surface);
+  border: 1px solid var(--wb-border);
   text-align: center;
 }
 
 .whiteboard-notice-box p {
   margin: 0 0 16px;
-  color: #222;
+  color: var(--wb-text);
   font-size: 15px;
 }
 
 .whiteboard-notice-box button {
   padding: 8px 18px;
   border: none;
-  border-radius: 6px;
-  background: #4f7cff;
-  color: #fff;
+  border-radius: 8px;
+  background: var(--wb-accent);
+  color: #06212f;
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
 }
