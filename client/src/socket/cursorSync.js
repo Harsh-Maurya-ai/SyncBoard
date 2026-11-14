@@ -16,8 +16,9 @@ export function listenForCursorUpdates(callback) {
   return listenForCursorMoves(callback);
 }
 
-// Draws (or moves) a labeled cursor for one collaborator inside the canvas container
-export function renderRemoteCursor(container, userId, position, color) {
+// Draws (or moves) a labeled cursor for one collaborator inside the canvas container.
+// position is in BOARD coordinates; zoom converts it to screen pixels.
+export function renderRemoteCursor(container, userId, position, color, zoom = 1) {
   if (!container || !position) return;
 
   let el = container.querySelector(`[data-cursor-id="${userId}"]`);
@@ -32,9 +33,23 @@ export function renderRemoteCursor(container, userId, position, color) {
     container.appendChild(el);
   }
 
+  // remember the board position, so the cursor can be moved again when we zoom
+  el.dataset.boardX = String(position.x);
+  el.dataset.boardY = String(position.y);
+
   el.style.setProperty("--cursor-color", color || "#1971c2");
-  el.style.transform = `translate(${position.x}px, ${position.y}px)`;
+  el.style.transform = `translate(${position.x * zoom}px, ${position.y * zoom}px)`;
   el.querySelector(".remote-cursor-label").textContent = userId.slice(0, 4);
+}
+
+// After the local zoom changed: put every remote cursor at its new screen position
+export function repositionRemoteCursors(container, zoom) {
+  if (!container) return;
+  container.querySelectorAll(".remote-cursor").forEach((el) => {
+    const x = Number(el.dataset.boardX) || 0;
+    const y = Number(el.dataset.boardY) || 0;
+    el.style.transform = `translate(${x * zoom}px, ${y * zoom}px)`;
+  });
 }
 
 // Removes a collaborator's cursor (e.g. once they disconnect)
@@ -43,11 +58,10 @@ export function removeRemoteCursor(container, userId) {
 }
 
 // Wires mousemove broadcasting + remote cursor rendering for the canvas container.
-// The container scrolls, so positions are sent as BOARD coordinates
-// (screen position + how far the container is scrolled). The board starts at the
-// container's top-left corner, so these match the canvas coordinates exactly.
+// The container scrolls and can be zoomed, so positions are sent as BOARD coordinates
+// ((screen position + scroll) / zoom). They match the canvas coordinates exactly.
 // Returns a cleanup function.
-export function attachCursorSync(container) {
+export function attachCursorSync(container, getZoom = () => 1) {
   if (!container) return () => {};
 
   let lastSent = 0;
@@ -57,14 +71,15 @@ export function attachCursorSync(container) {
     if (now - lastSent < THROTTLE_MS) return;
     lastSent = now;
     const rect = container.getBoundingClientRect();
+    const zoom = getZoom() || 1;
     broadcastCursorPosition({
-      x: e.clientX - rect.left + container.scrollLeft,
-      y: e.clientY - rect.top + container.scrollTop,
+      x: (e.clientX - rect.left + container.scrollLeft) / zoom,
+      y: (e.clientY - rect.top + container.scrollTop) / zoom,
     });
   };
 
   const stopCursorUpdates = listenForCursorUpdates(({ id, color, position }) => {
-    renderRemoteCursor(container, id, position, color);
+    renderRemoteCursor(container, id, position, color, getZoom());
   });
 
   const stopCursorRemoved = listenForCursorRemoved(({ id }) => {

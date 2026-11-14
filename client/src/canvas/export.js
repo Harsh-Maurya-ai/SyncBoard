@@ -13,16 +13,20 @@ function timestamp() {
 /**
  * Export canvas as PNG
  */
+/**
+ * Export canvas as PNG
+ */
 export function exportBoardAsPNG(canvas, title = "syncboard") {
   if (!canvas) return;
 
   canvas.discardActiveObject();
   canvas.renderAll();
 
+  // The board may be zoomed: always export it at 2x its real size
   const dataUrl = canvas.toDataURL({
     format: "png",
     quality: 1,
-    multiplier: 2,
+    multiplier: 2 / canvas.getZoom(),
   });
 
   const link = document.createElement("a");
@@ -43,26 +47,24 @@ export function exportBoardAsPDF(canvas, title = "syncboard") {
   canvas.discardActiveObject();
   canvas.renderAll();
 
+  // The board may be zoomed: use its real size, not the zoomed size
+  const zoom = canvas.getZoom();
+  const boardWidth = Math.round(canvas.getWidth() / zoom);
+  const boardHeight = Math.round(canvas.getHeight() / zoom);
+
   const dataUrl = canvas.toDataURL({
     format: "png",
     quality: 1,
-    multiplier: 2,
+    multiplier: 2 / zoom,
   });
 
   const pdf = new jsPDF({
     orientation: "landscape",
     unit: "px",
-    format: [canvas.getWidth(), canvas.getHeight()],
+    format: [boardWidth, boardHeight],
   });
 
-  pdf.addImage(
-    dataUrl,
-    "PNG",
-    0,
-    0,
-    canvas.getWidth(),
-    canvas.getHeight()
-  );
+  pdf.addImage(dataUrl, "PNG", 0, 0, boardWidth, boardHeight);
 
   pdf.save(`${title || "syncboard"}-${timestamp()}.pdf`);
 }

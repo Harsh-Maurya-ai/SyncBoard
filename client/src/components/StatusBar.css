@@ -39,3 +39,36 @@
 .status-save.error {
   color: var(--wb-danger);
 }
+
+/* ---------- Zoom layout ---------- */
+.status-bar {
+  gap: 12px;
+}
+
+.status-spacer {
+  flex: 1;
+}
+
+.status-live {
+  flex-shrink: 0;
+}
+
+@media (max-width: 700px) {
+  .status-bar {
+    gap: 8px;
+    padding: 0 8px;
+  }
+
+  /* Save text shrinks with "…" when there is no room */
+  .status-save {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* ---------- Taller bottom bar (fits the zoom buttons) ---------- */
+.status-bar {
+  height: 42px;
+}

@@ -5,6 +5,18 @@ import { Canvas, PencilBrush, IText, ActiveSelection } from "fabric";
 export const BOARD_WIDTH = 2400;
 export const BOARD_HEIGHT = 1600;
 
+// Zoom limits (1 = 100%)
+export const MIN_ZOOM = 0.25;
+export const MAX_ZOOM = 2;
+
+// Phones can't handle very large canvases (iPhone limit is about 16 million pixels),
+// so above this size we turn off the extra "retina" sharpness.
+const IS_IOS =
+  typeof navigator !== "undefined" &&
+  (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+const MAX_BACKSTORE_PIXELS = IS_IOS ? 16000000 : 40000000;
+
 // instanceof works in every Fabric version (obj.type is deprecated and may be missing in v7)
 export function isTextObject(obj) {
   return obj instanceof IText;
@@ -22,13 +34,28 @@ export function initCanvas(canvasElRef) {
     preserveObjectStacking: true,
   });
 
-  canvas.setDimensions({ width: BOARD_WIDTH, height: BOARD_HEIGHT });
+  setBoardZoom(canvas, 1);
 
   canvas.freeDrawingBrush = new PencilBrush(canvas);
   canvas.freeDrawingBrush.width = 3;
   canvas.freeDrawingBrush.color = "#000000";
 
   return canvas;
+}
+
+// Zooms the whole board (1 = 100%). The canvas gets bigger/smaller, so the
+// scrolling window around it grows/shrinks with it. Returns the zoom that was applied.
+export function setBoardZoom(canvas, zoom) {
+  const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(zoom * 1000) / 1000));
+  const width = Math.round(BOARD_WIDTH * next);
+  const height = Math.round(BOARD_HEIGHT * next);
+
+  const ratio = window.devicePixelRatio || 1;
+  canvas.enableRetinaScaling = width * height * ratio * ratio <= MAX_BACKSTORE_PIXELS;
+
+  canvas.setDimensions({ width, height });
+  canvas.setZoom(next);
+  return next;
 }
 
 export function setActiveTool(canvas, toolName) {

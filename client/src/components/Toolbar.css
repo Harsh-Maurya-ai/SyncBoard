@@ -299,3 +299,31 @@
     font-size: 10px;
   }
 }
+
+/* ---------- Zoom buttons ---------- */
+.toolbar-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.toolbar-icon-btn:disabled:hover {
+  background: transparent;
+}
+
+/* The "100%" button between zoom out and zoom in */
+.toolbar-zoom-percent {
+  min-width: 52px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--wb-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wb-text);
+  font-size: 13px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.toolbar-zoom-percent:hover {
+  background: var(--wb-surface-2);
+}

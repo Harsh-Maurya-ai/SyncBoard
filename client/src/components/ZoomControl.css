@@ -1,0 +1,71 @@
+.zoom-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zoom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--wb-border);
+  border-radius: 8px;
+  background: var(--wb-surface-2);
+  color: var(--wb-text);
+  cursor: pointer;
+  touch-action: manipulation; /* no double-tap page zoom on these buttons */
+}
+
+.zoom-btn:hover:not(:disabled) {
+  background: #3a3a3a;
+  border-color: var(--wb-accent);
+  color: var(--wb-accent);
+}
+
+.zoom-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.zoom-slider {
+  width: 120px;
+  margin: 0;
+  accent-color: var(--wb-accent);
+  cursor: pointer;
+}
+
+.zoom-percent {
+  min-width: 56px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--wb-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wb-text);
+  font-size: 13px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.zoom-percent:hover {
+  background: var(--wb-surface-2);
+}
+
+/* Phone: no slider (not enough room), buttons stay big enough to tap */
+@media (max-width: 700px) {
+  .zoom-slider {
+    display: none;
+  }
+
+  .zoom-control {
+    gap: 6px;
+  }
+
+  .zoom-btn {
+    width: 36px;
+    height: 32px;
+  }
+}

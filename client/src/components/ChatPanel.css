@@ -141,3 +141,14 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ---------- Keep chat above the taller bottom bar ---------- */
+.chat-panel {
+  bottom: 58px;
+}
+
+@media (max-width: 700px) {
+  .chat-panel {
+    bottom: 50px;
+  }
+}

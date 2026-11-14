@@ -7,11 +7,8 @@ import StatusBar from "./StatusBar";
 import "./Whiteboard.css";
 import { useAuth } from "../auth/authContext";
 import useChat from "../chat/useChat";
-import {
-  initCanvas,
-  setActiveTool,
-  attachPanHandlers, // SCROLL
-} from "../canvas/canvasSetup";
+import { initCanvas, setActiveTool, attachPanHandlers } from "../canvas/canvasSetup";
+import { zoomAround, attachZoomGestures } from "../canvas/zoom"; // ZOOM
 import {
   attachDrawingHandlers,
   setStrokeColor,
@@ -47,9 +44,9 @@ import {
   getFullBoardState,
   applyRemoteDrawEvent,
 } from "../socket/canvasSync";
-import { attachCursorSync } from "../socket/cursorSync";
+import { attachCursorSync, repositionRemoteCursors } from "../socket/cursorSync"; // ZOOM
 
-const TOOLS = ["select", "hand", "pen", "eraser", "shape", "text"]; // SCROLL: added "hand"
+const TOOLS = ["select", "hand", "pen", "eraser", "shape", "text"];
 const SHAPES = ["rectangle", "circle", "line", "arrow"];
 
 // board = { _id, title, role, canvasJSON } as returned by GET /api/boards/:id
@@ -76,6 +73,7 @@ export default function Whiteboard({ board, onBack }) {
   const [notice, setNotice] = useState("");
   const [showShare, setShowShare] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [zoom, setZoom] = useState(1); // ZOOM
 
   const canEdit = role !== "viewer";
 
@@ -85,6 +83,16 @@ export default function Whiteboard({ board, onBack }) {
     unread: chatUnread,
     sendMessage,
   } = useChat({ myUserId: user?.id, isOpen: showChat });
+
+  // ZOOM: one function for the + / - buttons, the slider, Ctrl+wheel and pinch.
+  // It only uses refs and setZoom, so the first copy stays valid forever.
+  const applyZoom = (nextZoom, anchor, from) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const applied = zoomAround(canvas, containerRef.current, nextZoom, anchor, from);
+    setZoom(applied);
+    repositionRemoteCursors(containerRef.current, applied);
+  };
 
   const handleToolChange = (tool) => {
     setActiveToolState(tool);
@@ -103,7 +111,6 @@ export default function Whiteboard({ board, onBack }) {
   };
 
   useEffect(() => {
-    // SCROLL: the canvas has a fixed size now, so there is no window-resize handling
     const canvas = initCanvas(canvasElRef);
     fabricCanvasRef.current = canvas;
 
@@ -137,9 +144,17 @@ export default function Whiteboard({ board, onBack }) {
       );
       cleanups.push(attachHistoryHandlers(canvas));
 
-      // SCROLL: drag-to-scroll for the Hand tool (mouse)
+      // Drag-to-scroll for the Hand tool (mouse)
       cleanups.push(
         attachPanHandlers(canvas, containerRef, () => activeToolRef.current)
+      );
+
+      // ZOOM: Ctrl+wheel / trackpad pinch / two-finger pinch
+      cleanups.push(
+        attachZoomGestures(canvas, containerRef, {
+          getActiveTool: () => activeToolRef.current,
+          onZoom: applyZoom,
+        })
       );
 
       // 2. Real-time collaboration
@@ -154,8 +169,10 @@ export default function Whiteboard({ board, onBack }) {
         })
       );
 
-      // Live cursors
-      cleanups.push(attachCursorSync(containerRef.current));
+      // Live cursors (ZOOM: positions are converted with the current zoom)
+      cleanups.push(
+        attachCursorSync(containerRef.current, () => canvas.getZoom())
+      );
 
       // Sync-on-join: answer a new joiner's request for the board,
       // and apply the board a peer sends us when we ARE the new joiner
@@ -303,7 +320,7 @@ export default function Whiteboard({ board, onBack }) {
 
   return (
     <div className="whiteboard-wrapper">
-      <Toolbar
+           <Toolbar
         title={board.title}
         role={role}
         tools={TOOLS}
@@ -327,6 +344,8 @@ export default function Whiteboard({ board, onBack }) {
         chatOpen={showChat}
         chatUnread={chatUnread}
         onToggleChat={() => setShowChat((open) => !open)}
+        //zoom={zoom}
+        //onZoomChange={(value) => applyZoom(value)}
       />
 
       <input
@@ -347,7 +366,6 @@ export default function Whiteboard({ board, onBack }) {
           />
         )}
 
-        {/* SCROLL: this box scrolls horizontally + vertically over the big board */}
         <div className="whiteboard-canvas-container" ref={containerRef}>
           <canvas ref={canvasElRef} />
         </div>
@@ -358,6 +376,8 @@ export default function Whiteboard({ board, onBack }) {
         userCount={userCount}
         saveStatus={saveStatus}
         canEdit={canEdit}
+        zoom={zoom} // ZOOM
+        onZoomChange={(value) => applyZoom(value)} // ZOOM
       />
 
       {showChat && (
