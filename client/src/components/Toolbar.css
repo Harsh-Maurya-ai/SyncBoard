@@ -231,3 +231,71 @@
   border: none;
   border-radius: 50%;
 }
+
+/* ---------- Responsive ---------- */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .toolbar-group {
+    padding: 0 10px;
+  }
+
+  .toolbar-title {
+    max-width: 180px;
+  }
+}
+
+/* Phone */
+@media (max-width: 700px) {
+  .toolbar-menu {
+    gap: 6px;
+    padding: 6px 8px;
+  }
+
+  .toolbar-title {
+    max-width: 38vw;
+    font-size: 14px;
+  }
+
+  .toolbar-role {
+    padding: 2px 7px;
+    font-size: 10px;
+  }
+
+  /* Icons only, no text next to them */
+  .toolbar-btn-text {
+    display: none;
+  }
+
+  .toolbar-action-btn {
+    padding: 0 10px;
+  }
+
+  /* The ribbon becomes one row you can swipe sideways */
+  .toolbar-ribbon {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 2px 4px 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .toolbar-group {
+    flex-shrink: 0;
+    padding: 0 8px;
+  }
+
+  .toolbar-group-body {
+    min-height: 46px;
+  }
+
+  .toolbar-icon-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .toolbar-group-label {
+    padding: 2px 0 5px;
+    font-size: 10px;
+  }
+}

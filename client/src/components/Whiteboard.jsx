@@ -2,12 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import Toolbar from "./Toolbar";
 import ShareDialog from "./ShareDialog";
 import ChatPanel from "./ChatPanel";
-import SizeRail from "./SizeRail"; // UI
-import StatusBar from "./StatusBar"; // UI
+import SizeRail from "./SizeRail";
+import StatusBar from "./StatusBar";
 import "./Whiteboard.css";
 import { useAuth } from "../auth/authContext";
 import useChat from "../chat/useChat";
-import { initCanvas, resizeCanvas, setActiveTool } from "../canvas/canvasSetup";
+import {
+  initCanvas,
+  setActiveTool,
+  attachPanHandlers, // SCROLL
+} from "../canvas/canvasSetup";
 import {
   attachDrawingHandlers,
   setStrokeColor,
@@ -45,7 +49,7 @@ import {
 } from "../socket/canvasSync";
 import { attachCursorSync } from "../socket/cursorSync";
 
-const TOOLS = ["select", "pen", "eraser", "shape", "text"];
+const TOOLS = ["select", "hand", "pen", "eraser", "shape", "text"]; // SCROLL: added "hand"
 const SHAPES = ["rectangle", "circle", "line", "arrow"];
 
 // board = { _id, title, role, canvasJSON } as returned by GET /api/boards/:id
@@ -73,7 +77,7 @@ export default function Whiteboard({ board, onBack }) {
   const [showShare, setShowShare] = useState(false);
   const [showChat, setShowChat] = useState(false);
 
-  const canEdit = role !== "viewer"; // UI
+  const canEdit = role !== "viewer";
 
   // Chat: messages + unread counter (must stay above the main useEffect)
   const {
@@ -99,15 +103,12 @@ export default function Whiteboard({ board, onBack }) {
   };
 
   useEffect(() => {
-    const canvas = initCanvas(canvasElRef, containerRef);
+    // SCROLL: the canvas has a fixed size now, so there is no window-resize handling
+    const canvas = initCanvas(canvasElRef);
     fabricCanvasRef.current = canvas;
 
     let cancelled = false;
     const cleanups = []; // everything attached below is detached on unmount
-
-    const handleResize = () => resizeCanvas(canvas, containerRef);
-    window.addEventListener("resize", handleResize);
-    cleanups.push(() => window.removeEventListener("resize", handleResize));
 
     const boot = async () => {
       // 1. Put the board saved in MongoDB onto the canvas
@@ -135,6 +136,11 @@ export default function Whiteboard({ board, onBack }) {
         )
       );
       cleanups.push(attachHistoryHandlers(canvas));
+
+      // SCROLL: drag-to-scroll for the Hand tool (mouse)
+      cleanups.push(
+        attachPanHandlers(canvas, containerRef, () => activeToolRef.current)
+      );
 
       // 2. Real-time collaboration
       connectSocket();
@@ -238,12 +244,6 @@ export default function Whiteboard({ board, onBack }) {
     };
   }, []);
 
-  // UI: the drawing sheet gets narrower/wider when the size rail appears or
-  // disappears (role changed live), so fit the canvas to it again
-  useEffect(() => {
-    resizeCanvas(fabricCanvasRef.current, containerRef);
-  }, [canEdit]);
-
   const handleShapeChange = (shape) => {
     setActiveShapeState(shape);
     setShapeType(shape);
@@ -337,7 +337,7 @@ export default function Whiteboard({ board, onBack }) {
         onChange={handleImportFile}
       />
 
-      {/* UI: dark workspace + vertical size slider + white drawing sheet */}
+      {/* Dark workspace + size slider + the scrolling drawing area */}
       <div className={`whiteboard-stage${canEdit ? " has-rail" : ""}`}>
         {canEdit && (
           <SizeRail
@@ -347,12 +347,12 @@ export default function Whiteboard({ board, onBack }) {
           />
         )}
 
+        {/* SCROLL: this box scrolls horizontally + vertically over the big board */}
         <div className="whiteboard-canvas-container" ref={containerRef}>
           <canvas ref={canvasElRef} />
         </div>
       </div>
 
-      {/* UI: bottom status bar (live users + auto-save status) */}
       <StatusBar
         connected={connected}
         userCount={userCount}

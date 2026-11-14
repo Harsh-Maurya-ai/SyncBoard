@@ -13,10 +13,21 @@ const PRESET_COLORS = [
 // Which icon each tool uses
 const TOOL_ICONS = {
   select: "select",
+  hand: "hand",
   pen: "pen",
   eraser: "eraser",
   shape: "shape",
   text: "text",
+};
+
+// Tooltip text for each tool
+const TOOL_TITLES = {
+  select: "Select tool",
+  hand: "Hand tool (move around the board)",
+  pen: "Pen tool",
+  eraser: "Eraser tool",
+  shape: "Shape tool",
+  text: "Text tool",
 };
 
 // One ribbon section: buttons on top, small label underneath (like Paint)
@@ -29,11 +40,18 @@ function Group({ label, children }) {
   );
 }
 
+// Icon + text button. On phones the text is hidden (icon only).
 function ActionButton({ icon, children, className = "", ...props }) {
   return (
-    <button type="button" className={`toolbar-action-btn ${className}`} {...props}>
+    <button
+      type="button"
+      className={`toolbar-action-btn ${className}`}
+      title={children}
+      aria-label={children}
+      {...props}
+    >
       <Icon name={icon} size={16} />
-      {children}
+      <span className="toolbar-btn-text">{children}</span>
     </button>
   );
 }
@@ -82,11 +100,13 @@ export default function Toolbar({
 
         <button
           type="button"
+          title="Chat"
+          aria-label="Chat"
           className={`toolbar-action-btn chat-toggle-btn${chatOpen ? " active" : ""}`}
           onClick={onToggleChat}
         >
           <Icon name="chat" size={16} />
-          Chat
+          <span className="toolbar-btn-text">Chat</span>
           {chatUnread > 0 && (
             <span className="chat-unread-badge">
               {chatUnread > 99 ? "99+" : chatUnread}
@@ -111,8 +131,8 @@ export default function Toolbar({
                   key={tool}
                   type="button"
                   aria-pressed={activeTool === tool}
-                  aria-label={`${tool} tool`}
-                  title={`${tool} tool`}
+                  aria-label={TOOL_TITLES[tool] || `${tool} tool`}
+                  title={TOOL_TITLES[tool] || `${tool} tool`}
                   className={`toolbar-icon-btn${activeTool === tool ? " active" : ""}`}
                   onClick={() => onToolChange(tool)}
                 >

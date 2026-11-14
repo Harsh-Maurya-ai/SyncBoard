@@ -150,3 +150,30 @@
   color: #666;
   font-size: 13px;
 }
+
+/* ---------- Phone ---------- */
+@media (max-width: 600px) {
+  .share-dialog {
+    width: 94vw;
+    max-height: 90vh;
+    max-height: 90dvh;
+    padding: 16px;
+  }
+
+  .share-row {
+    flex-wrap: wrap;
+  }
+
+  .share-link {
+    flex: 1 1 100%;
+    font-size: 16px;
+  }
+
+  .share-member {
+    flex-wrap: wrap;
+  }
+
+  .share-member-name {
+    flex: 1 1 100%;
+  }
+}

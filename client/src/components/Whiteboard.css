@@ -20,7 +20,7 @@
   background: var(--wb-bg);
 }
 
-/* Dark workspace around the white drawing sheet */
+/* Dark workspace around the drawing area */
 .whiteboard-stage {
   position: relative;
   display: flex;
@@ -35,16 +35,25 @@
   padding-left: 84px;
 }
 
-/* The white drawing sheet (the canvas fills it) */
+/* The scrolling window over the big board.
+   Horizontal + vertical scrollbars appear when the board is bigger than the window. */
 .whiteboard-canvas-container {
   position: relative;
   flex: 1;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
   border-radius: 4px;
-  background: #fff;
+  background: #2a2a2a; /* shown only if your screen is bigger than the board */
+  scrollbar-width: auto;
+  scrollbar-color: #7a7a7a #262626;
+  overscroll-behavior: contain;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* The white board itself (Fabric wraps the canvas in this element) */
+.whiteboard-canvas-container > .canvas-container {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 
 /* Remote collaborator cursors */
@@ -92,6 +101,7 @@
 
 .whiteboard-notice-box {
   max-width: 360px;
+  margin: 0 16px;
   padding: 24px;
   border-radius: 12px;
   background: var(--wb-surface);
@@ -114,4 +124,18 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+}
+
+/* ---------- Phone ---------- */
+@media (max-width: 700px) {
+  .whiteboard-stage {
+    padding: 8px;
+  }
+
+  /* The size slider moves above the board and becomes horizontal */
+  .whiteboard-stage.has-rail {
+    flex-direction: column;
+    gap: 8px;
+    padding-left: 8px;
+  }
 }

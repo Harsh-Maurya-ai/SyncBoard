@@ -43,9 +43,9 @@ export function removeRemoteCursor(container, userId) {
 }
 
 // Wires mousemove broadcasting + remote cursor rendering for the canvas container.
-// Tracks the native mousemove on the container (not Fabric's canvas events) since
-// the cursor overlay is a plain positioned <div>, not a canvas object — it needs
-// container-relative screen pixels, not Fabric's internal scene coordinates.
+// The container scrolls, so positions are sent as BOARD coordinates
+// (screen position + how far the container is scrolled). The board starts at the
+// container's top-left corner, so these match the canvas coordinates exactly.
 // Returns a cleanup function.
 export function attachCursorSync(container) {
   if (!container) return () => {};
@@ -57,7 +57,10 @@ export function attachCursorSync(container) {
     if (now - lastSent < THROTTLE_MS) return;
     lastSent = now;
     const rect = container.getBoundingClientRect();
-    broadcastCursorPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    broadcastCursorPosition({
+      x: e.clientX - rect.left + container.scrollLeft,
+      y: e.clientY - rect.top + container.scrollTop,
+    });
   };
 
   const stopCursorUpdates = listenForCursorUpdates(({ id, color, position }) => {
