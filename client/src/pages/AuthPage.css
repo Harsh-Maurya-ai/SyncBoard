@@ -1,89 +1,273 @@
+/* ============ SyncBoard login / register ============ */
+
 .auth-page {
+  --ap-purple: #7c1dff;
+  --ap-purple-dark: #6a0ee6;
+  --ap-blue: #3b82f6;
+  --ap-ink: #111827;
+  --ap-text: #6b7280;
+  --ap-line: #e5e7eb;
+
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  padding: 24px 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(124, 29, 255, 0.16), transparent 42%),
+    radial-gradient(circle at 88% 88%, rgba(59, 130, 246, 0.16), transparent 42%),
+    #faf7ff;
+}
+
+/* Dotted whiteboard grid */
+.auth-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(124, 29, 255, 0.22) 1.2px, transparent 1.2px);
+  background-size: 26px 26px;
+}
+
+/* Sketched whiteboard shapes: rectangle, circle, straight lines, triangle, cursors */
+.auth-page::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 900' preserveAspectRatio='xMidYMid slice'%3E%3Cg fill='none' stroke='%237c1dff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' opacity='0.28'%3E%3Crect x='90' y='130' width='170' height='110' rx='10' stroke-dasharray='10 10' transform='rotate(-8 175 185)'/%3E%3Ccircle cx='1290' cy='170' r='58'/%3E%3Cpath d='M1170 720 L1380 630'/%3E%3Cpath d='M1352 612 L1383 629 L1360 654' /%3E%3Cpath d='M60 770 L310 770'/%3E%3Ccircle cx='60' cy='770' r='6' fill='%237c1dff'/%3E%3Ccircle cx='310' cy='770' r='6' fill='%237c1dff'/%3E%3Cpath d='M1100 420 L1250 420 L1175 340 Z' stroke='%233b82f6'/%3E%3C/g%3E%3Cg opacity='0.55'%3E%3Cpath d='M0 0 L0 16 L4.5 12 L8 19 L10.5 18 L7 11 L13 11 Z' fill='%237c1dff' transform='translate(1060 250) scale(1.6)'/%3E%3Cpath d='M0 0 L0 16 L4.5 12 L8 19 L10.5 18 L7 11 L13 11 Z' fill='%233b82f6' transform='translate(250 620) scale(1.6)'/%3E%3C/g%3E%3C/svg%3E")
+    center / cover no-repeat;
+}
+
+/* ---------- Card ---------- */
+.auth-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(420px, 100%);
+  margin: auto;
+  padding: 38px 32px 26px;
+  border: 1px solid rgba(124, 29, 255, 0.14);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow:
+    0 28px 60px -14px rgba(76, 29, 149, 0.3),
+    0 2px 6px rgba(17, 24, 39, 0.06);
+  animation: auth-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Purple-to-blue accent line on top of the card */
+.auth-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 32px;
+  right: 32px;
+  height: 4px;
+  border-radius: 0 0 6px 6px;
+  background: linear-gradient(90deg, var(--ap-purple), var(--ap-blue));
+}
+
+/* ---------- Title with logo ---------- */
+.auth-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  color: var(--ap-ink);
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.auth-title::before {
+  content: "S";
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
-  background: #1e1e1e;
-}
-
-.auth-card {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  width: min(380px, 92vw);
-  padding: 28px;
-  border-radius: 12px;
-  background: #fff;
-}
-
-.auth-title {
-  margin: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 15px;
+  background: linear-gradient(135deg, var(--ap-purple), #a45bff);
+  color: #ffffff;
   font-size: 26px;
-  text-align: center;
+  font-weight: 800;
+  letter-spacing: 0;
+  box-shadow: 0 10px 22px rgba(124, 29, 255, 0.35);
+  transform: rotate(-6deg);
 }
 
 .auth-subtitle {
-  margin: 0;
-  color: #666;
-  font-size: 14px;
+  margin: -6px 0 6px;
+  color: var(--ap-text);
+  font-size: 14.5px;
   text-align: center;
 }
 
+/* ---------- Fields ---------- */
 .auth-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  color: #333;
+  gap: 6px;
+  color: var(--ap-ink);
   font-size: 13px;
   font-weight: 600;
 }
 
 .auth-field input {
-  padding: 9px 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 14px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--ap-line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--ap-ink);
+  font-size: 15px;
   font-weight: 400;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.auth-field input:hover {
+  border-color: #d3c3f0;
 }
 
 .auth-field input:focus {
-  outline: 2px solid #4f7cff;
-  outline-offset: -1px;
+  outline: none;
+  border-color: var(--ap-purple);
+  box-shadow: 0 0 0 4px rgba(124, 29, 255, 0.15);
 }
 
+/* Keep the white look when the browser autofills */
+.auth-field input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
+  -webkit-text-fill-color: var(--ap-ink);
+}
+
+/* ---------- Error ---------- */
 .auth-error {
   margin: 0;
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: #ffe3e3;
+  padding: 10px 12px;
+  border-left: 4px solid #e03131;
+  border-radius: 8px;
+  background: #fff1f1;
   color: #c92a2a;
   font-size: 13px;
+  animation: auth-shake 0.35s ease;
 }
 
+/* ---------- Main button ---------- */
 .auth-submit {
-  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 13px;
   border: none;
-  border-radius: 6px;
-  background: #4f7cff;
-  color: #fff;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--ap-purple), #9a4dff);
+  color: #ffffff;
   font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 10px 22px rgba(124, 29, 255, 0.32);
+  transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
 }
 
 .auth-submit:hover:not(:disabled) {
-  background: #6b92ff;
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+  box-shadow: 0 14px 28px rgba(124, 29, 255, 0.4);
+}
+
+.auth-submit:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .auth-submit:disabled {
-  opacity: 0.6;
+  opacity: 0.85;
   cursor: default;
 }
 
+/* Little spinner while "Please wait…" is shown */
+.auth-submit:disabled::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border: 2.5px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: auth-spin 0.8s linear infinite;
+}
+
+/* ---------- Switch login <-> register ---------- */
 .auth-switch {
+  margin-top: 2px;
+  padding: 16px 0 0;
   border: none;
+  border-top: 1px solid var(--ap-line);
   background: none;
-  color: #4f7cff;
-  font-size: 13px;
+  color: var(--ap-purple);
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
+}
+
+.auth-switch:hover {
+  color: var(--ap-purple-dark);
+  text-decoration: underline;
+}
+
+/* ---------- Animations ---------- */
+@keyframes auth-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes auth-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+@keyframes auth-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- Small screens ---------- */
+@media (max-width: 480px) {
+  .auth-page {
+    padding: 16px 12px;
+  }
+
+  .auth-card {
+    padding: 32px 20px 22px;
+    border-radius: 16px;
+  }
+
+  .auth-field input {
+    font-size: 16px; /* stops iPhones from zooming in on focus */
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-card,
+  .auth-error {
+    animation: none;
+  }
 }

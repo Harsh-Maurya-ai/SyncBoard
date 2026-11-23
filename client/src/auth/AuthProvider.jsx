@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AuthContext } from "./authContext";
+import Loader from "../components/Loader";
 import {
   ApiError,
   clearToken,
@@ -64,6 +65,9 @@ export default function AuthProvider({ children }) {
     () => ({ user, loading, login, register, logout }),
     [user, loading, login, register, logout]
   );
+
+  // Website just opened and we are restoring the login: show the loader
+  if (loading) return <Loader text="Loading SyncBoard" />;
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

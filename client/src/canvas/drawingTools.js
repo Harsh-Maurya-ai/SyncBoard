@@ -4,6 +4,7 @@ import { isTextObject } from "./canvasSetup";
 
 let isDrawing = false;
 let startPoint = null;
+let endPoint = null; // last pointer position while dragging (used to measure the drag)
 let activeShape = null;
 let currentShapeType = "rectangle";
 let currentStrokeColor = "#000000";
@@ -16,6 +17,19 @@ export function getPoint(canvas, opt) {
     return canvas.getScenePoint(opt.e);
   }
   return canvas.getPointer(opt.e);
+}
+
+// Holding Shift while dragging a line/arrow snaps it to 0, 45, 90... degrees
+function snapToAngle(start, point) {
+  const dx = point.x - start.x;
+  const dy = point.y - start.y;
+  const length = Math.hypot(dx, dy);
+  const step = Math.PI / 4;
+  const angle = Math.round(Math.atan2(dy, dx) / step) * step;
+  return {
+    x: start.x + Math.cos(angle) * length,
+    y: start.y + Math.sin(angle) * length,
+  };
 }
 
 export function setStrokeColor(canvas, color) {
@@ -94,19 +108,8 @@ export function drawShape(canvas, shapeType, start, end) {
 }
 
 function updateShapeGeometry(canvas, shape, shapeType, start, end) {
-  if (shapeType === "rectangle" || shapeType === "circle") {
-    canvas.remove(shape);
-    const updated = createShape(shapeType, start, end);
-    canvas.add(updated);
-    return updated;
-  }
-
-  if (shapeType === "line") {
-    shape.set({ x1: start.x, y1: start.y, x2: end.x, y2: end.y });
-    shape.setCoords();
-    return shape;
-  }
-
+  // Every shape (including the straight line) is rebuilt from start -> end,
+  // so its size and position are always correct when the mouse is released
   canvas.remove(shape);
   const updated = createShape(shapeType, start, end);
   canvas.add(updated);
@@ -173,6 +176,7 @@ export function handleMouseDown(canvas, opt, toolName) {
 
   isDrawing = true;
   startPoint = getPoint(canvas, opt);
+  endPoint = startPoint;
   activeShape = createShape(currentShapeType, startPoint, startPoint);
   canvas.add(activeShape);
 }
@@ -180,7 +184,11 @@ export function handleMouseDown(canvas, opt, toolName) {
 export function handleMouseMove(canvas, opt, toolName) {
   if (toolName !== "shape" || !isDrawing || !activeShape) return;
 
-  const pointer = getPoint(canvas, opt);
+  let pointer = getPoint(canvas, opt);
+  const isLineLike = currentShapeType === "line" || currentShapeType === "arrow";
+  if (isLineLike && opt.e?.shiftKey) pointer = snapToAngle(startPoint, pointer);
+  endPoint = pointer;
+
   activeShape = updateShapeGeometry(
     canvas,
     activeShape,
@@ -195,18 +203,24 @@ export function handleMouseUp(canvas, toolName, onShapeComplete) {
   if (toolName !== "shape" || !activeShape) return;
 
   const finished = activeShape;
+  const dragX = Math.abs((endPoint?.x ?? 0) - (startPoint?.x ?? 0));
+  const dragY = Math.abs((endPoint?.y ?? 0) - (startPoint?.y ?? 0));
+
   isDrawing = false;
   activeShape = null;
   startPoint = null;
+  endPoint = null;
 
-  // A plain click without dragging makes an empty shape: discard it
-  if ((finished.width || 0) < 3 && (finished.height || 0) < 3) {
+  // A plain click without dragging makes an empty shape: discard it.
+  // (Measured from the drag itself, so horizontal / vertical lines are fine.)
+  if (dragX < 3 && dragY < 3) {
     canvas.remove(finished);
     canvas.requestRenderAll();
     return;
   }
 
   finished.set({ selectable: true, evented: true });
+  finished.setCoords();
   canvas.requestRenderAll();
   pushToHistory(canvas);
 

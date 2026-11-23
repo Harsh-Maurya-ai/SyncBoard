@@ -9,10 +9,17 @@
       content="SyncBoard is a real-time collaborative whiteboard for teams."
     />
     <title>SyncBoard – Real-time Collaborative Whiteboard</title>
-    
+    <link rel="stylesheet" href="/loader.css" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Shown until React starts; React replaces it automatically -->
+      <div class="sb-loader sb-loader-full" role="status" aria-live="polite">
+        <div class="sb-spinner"></div>
+        <div class="sb-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+        <p class="sb-loader-text">Loading SyncBoard</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

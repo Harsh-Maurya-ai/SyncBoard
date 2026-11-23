@@ -84,6 +84,22 @@ export default function Toolbar({
   const canEdit = role !== "viewer";
   const isOwner = role === "owner";
 
+  // The Line button is a shortcut: Shape tool + "line" shape
+  const lineActive = activeTool === "shape" && activeShape === "line";
+  const isToolActive = (tool) =>
+    tool === "shape" ? activeTool === "shape" && !lineActive : activeTool === tool;
+
+  const handleToolClick = (tool) => {
+    // Coming back from the Line button: go back to a normal shape
+    if (tool === "shape" && lineActive) onShapeChange("rectangle");
+    onToolChange(tool);
+  };
+
+  const handleLineClick = () => {
+    onShapeChange("line");
+    onToolChange("shape");
+  };
+
   return (
     <div className="toolbar">
       {/* Top menu row */}
@@ -130,15 +146,26 @@ export default function Toolbar({
                 <button
                   key={tool}
                   type="button"
-                  aria-pressed={activeTool === tool}
+                  aria-pressed={isToolActive(tool)}
                   aria-label={TOOL_TITLES[tool] || `${tool} tool`}
                   title={TOOL_TITLES[tool] || `${tool} tool`}
-                  className={`toolbar-icon-btn${activeTool === tool ? " active" : ""}`}
-                  onClick={() => onToolChange(tool)}
+                  className={`toolbar-icon-btn${isToolActive(tool) ? " active" : ""}`}
+                  onClick={() => handleToolClick(tool)}
                 >
                   <Icon name={TOOL_ICONS[tool] || "select"} size={20} />
                 </button>
               ))}
+
+              <button
+                type="button"
+                aria-pressed={lineActive}
+                aria-label="Straight line (hold Shift for 45° angles)"
+                title="Straight line (hold Shift for 45° angles)"
+                className={`toolbar-icon-btn${lineActive ? " active" : ""}`}
+                onClick={handleLineClick}
+              >
+                <Icon name="line" size={20} />
+              </button>
 
               {activeTool === "shape" && (
                 <select

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Whiteboard from "../components/Whiteboard";
+import Loader from "../components/Loader";
 import { fetchBoard } from "../api/client";
 
 // Loads the board (title, your role, saved canvas) before showing the editor
@@ -27,7 +28,7 @@ export default function BoardPage() {
 
   // Still waiting for the board that matches the current URL
   if (state.boardId !== boardId) {
-    return <div className="page-message">Loading board…</div>;
+    return <Loader text="Loading your board" />;
   }
 
   if (state.error) {
